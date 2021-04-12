@@ -136,19 +136,19 @@ for (i in 2:ncol(cts)){
 }
 
 
-# 7) Normalising gene expression distributions by the method of trimmed mean of M-values (TMM) - using calcNormFactors function in edgeR
+# 7) Normalizing gene expression distributions by the method of trimmed mean of M-values (TMM) - using calcNormFactors function in edgeR
 
-# before normalisation  
+# before normalization  
 boxplot(lcpm, las=2, col=col, main="", cex.axis = 0.8)
-title(main="Before normalisation",ylab="Log-cpm")
-# normalisation factors = scaling factors for the library sizes
-# for our dataset, the effect of TMM-normalisation is mild - the scaling factors are all relatively close to 1
+title(main="Before normalization",ylab="Log-cpm")
+# normalization factors = scaling factors for the library sizes
+# for our dataset, the effect of TMM-normalization is mild - the scaling factors are all relatively close to 1
 cts <- calcNormFactors(cts, method = "TMM")
 cts$samples$norm.factors
-# after normalisation - very slight difference 
+# after normalization - very slight difference 
 lcpm <- cpm(cts, log=TRUE)
 boxplot(lcpm, las=2, col=col, main="", cex.axis = 0.8)
-title(main="Normalised data",ylab="Log-cpm")
+title(main="Normalized data",ylab="Log-cpm")
 
 
 # 8-a) Unsupervised clustering of samples
@@ -418,7 +418,6 @@ ggplot(data = subs_l, aes(x=lncRNA, y=mRNA, fill=corr_coef)) +
 
 # 11) WGCNA 
 # 11-a) Setup/prepare data
-```{r}
 # linear modeling 
 vfit2 <- lmFit(v, design)
 # all possible pairwise contrasts
