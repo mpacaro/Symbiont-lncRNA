@@ -108,7 +108,7 @@ table(rowSums(cts$counts==0)==48)
 dim(cts) # 48155 genes 
 keep <- filterByExpr(cts, group=cts$samples$group)
 cts <- cts[keep,, keep.lib.sizes=FALSE]
-dim(cts) # 32095 genes - about 2/3 (67%) of the number that we started with
+dim(cts) # 32095 transcripts/isoforms - about 2/3 (67%) of the number that we started with
 
 
 # 6) Density plots of log-CPM values of each sample for raw pre-filtered data and post-filtered data 
@@ -134,6 +134,8 @@ for (i in 2:ncol(cts)){
   den <- density(lcpm[,i])
   lines(den$x, den$y, col=col[i], lwd=2)
 }
+#raw data - out of all reads 0.25 is less than 0 (have really low counts)
+#density = proportion of isoforms to toal isoforms 
 
 
 # 7) Normalizing gene expression distributions by the method of trimmed mean of M-values (TMM) - using calcNormFactors function in edgeR
@@ -180,6 +182,7 @@ title(main="B. Temperature")
 par(mfrow=c(1,1))
 plotMDS(lcpm, labels=paste(cts$samples$group, cts$samples$day, cts$samples$temp, sep="."), cex=0.75, xlim=c(-4, 5))
 title(main="Population-Day-Temperature")
+#plot shows temps on day 1, 9, 13 (27C)
 
 
 # 8-b) Separating lncRNAs and mRNAs and creating dgeObj for each 
@@ -326,6 +329,7 @@ onlymrna <- MI.27CvsSM.27C[grep("^mRNA", rownames(MI.27CvsSM.27C)), ] # 19162 DE
 # useful graphical representations of differential expression results
 # mean-difference plot displaying the log-fold change against average log-counts per million with DE genes highlighted
 plotMD(efit, column=1, status=dt[,1], main=colnames(efit)[1], xlim=c(-8,13))
+
 # heatmap - top 100 DE genes from MI.27C vs SM.27C - both lncRNAs and mRNAs 
 MI.27CvsSM.27C.topgenes <- rownames(MI.27CvsSM.27C)[1:100]
 i <- which(rownames(v) %in% MI.27CvsSM.27C.topgenes)
@@ -334,7 +338,7 @@ mycol <- colorpanel(1000,"blue","white","red")
 # since the margins of the heatmap are too large, the columns and rows are not true representations; it is better to save the heatmap to your computer as follows and then open it online (it will take a bit time to load) 
 svg("myheatmap.svg", width=20, height=16)
 heatmap.2(lcpm[i,], scale="row", labRow=rownames(v)[i], labCol=gt, col=mycol, trace="none", density.info="none", margin=c(8,6), lhei=c(2,10), dendrogram="column") 
-
+#could not generate svg output- come back to later!!!!!
 
 # 10-a) Pearson correlation between mRNA vs lncRNA - produces a table with gene IDs, corr values, and p-value 
 
@@ -362,7 +366,7 @@ ds <- as.data.frame(ds)
 # convert elements into character type
 ds <- apply(ds,2,as.character) 
 # write result into a table
-#write.csv(ds, "corr_result_1hr.csv") 
+write.csv(ds, "corr_result_1hr.csv") 
 # what the output file looks like 
 ds
 
