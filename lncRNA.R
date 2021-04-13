@@ -338,10 +338,10 @@ mycol <- colorpanel(1000,"blue","white","red")
 # since the margins of the heatmap are too large, the columns and rows are not true representations; it is better to save the heatmap to your computer as follows and then open it online (it will take a bit time to load) 
 svg("myheatmap.svg", width=20, height=16)
 heatmap.2(lcpm[i,], scale="row", labRow=rownames(v)[i], labCol=gt, col=mycol, trace="none", density.info="none", margin=c(8,6), lhei=c(2,10), dendrogram="column") 
-#could not generate svg output- come back to later!!!!!
+
 
 # 10-a) Pearson correlation between mRNA vs lncRNA - produces a table with gene IDs, corr values, and p-value 
-
+getwd()
 # this is a test run with smaller datasets - once I made sure the output was how I wanted it to be, I created an Rscript (corr_test.R) and submitted it as a job. I had to download the lncRNA (lds) and mRNA (mds) files to the terminal before I could run the job. The .qsub file is called "corr_test.qsub" and can be found in the "repeat" directory (same as this document). It has all the bash options and the command to load the R module. The .R file does not have the bash options. Once the .cvs file from that script is produced, I imported it onto here and did further analyses
 # test run - first 500 genes 
 x <- lds[1:500,]
@@ -366,22 +366,33 @@ ds <- as.data.frame(ds)
 # convert elements into character type
 ds <- apply(ds,2,as.character) 
 # write result into a table
-write.csv(ds, "corr_result_1hr.csv") 
+#changing directory from james to mine to save csv
+setwd("/projectnb2/bi594/mpacaro/lncRNA/")
+getwd()
+write.csv(ds, "corr_result_1hr.csv") #not sure if this is right csv for next part
+
 # what the output file looks like 
 ds
 
 
 # 10-b) Correlation heatmap 
 
+#might need to change csv!!!!!!!!!!!!!!
+
 # read in the pearson correlation test output  
-corr_result <- read.table("/projectnb/incrna/mary_lncrna/R/repeat/output.csv", header = TRUE, sep="", stringsAsFactors = F)
+corr_result <- read.table("/projectnb2/bi594/mpacaro/lncRNA/corr_result_1hr.csv", header = TRUE, sep="", stringsAsFactors = F)
+head(corr_result)
 # 1345 interactions
 #dim(corr_result)  
 # edit column names to show which ones are mRNAs and lncRNAs 
 colnames(corr_result)[1:2] <- c("lncRNA", "mRNA")
+View(corr_result)
 # check that the mRNA and lncRNA columns are labeled correctly 
 #sapply(colnames(corr_result[]), function(x) grep("mRNA", corr_result[,x]))
 # 119 lncRNAs and 670 mRNAs are involved in the interactions 
+
+#dont know where she got numbers above^^^
+
 #c(length(unique(corr_result$lncRNA)), length(unique(corr_result$mRNA))) 
 # exclude p-value column  
 corr1 <- corr_result[1:3] 
