@@ -162,7 +162,7 @@ title(main="After Normalization",ylab="Log-cpm")
 #normalization required to ensure that expression distributions of each sample are similar across experiment 
 #possible figure captions: figures show pre vs post normalization where sample distributions are different before normalization and more similar after. Normalization method is trimmed mean of M-values (TMM). The effect of TMM normalization is mild as the scaling facorts are all close to 1
 #confused why these two figures look so similar, some code is missing from tutorial?
-
+head(lcpm)
 # 8-a) Unsupervised clustering of samples
 
 # observing similarities and dissimilarities between samples in an unsupervised manner can give us an idea of the extent to which differential expression can be detected before carrying out formal tests
@@ -176,12 +176,15 @@ levels(col.group) <-  brewer.pal(nlevels(col.group), "Set1")
 col.group <- as.character(col.group)
 plotMDS(lcpm, labels=cts$samples$group, col=col.group) #plotMDS = multi-dimensional scaling (MDS) plot. plot shows similarities and dissimilarities between samples, gives idea of extent of differential expression before actual formal tests
 title(main="A. Population")
-# temperature plot
+# temperature plot 
+#change axes 
+sizeGrWindow(15,12)
 col.temp <- cts$samples$temp
 levels(col.temp) <-  brewer.pal(nlevels(col.temp), "Set2")
 col.temp <- as.character(col.temp)
-plotMDS(lcpm, labels=cts$samples$temp, col=col.temp)
+plotMDS(lcpm, labels=cts$samples$temp, xlab="Log normalized expression dim 1", ylab="Log normalized expression dim 2", col=col.temp)
 title(main="B. Temperature")
+
 # # day has no effect on expression differences -- no cluster -- left out of downstream analyses 
 # col.day <- cts$samples$day
 # levels(col.day) <-  brewer.pal(nlevels(col.day), "Set3")
@@ -392,7 +395,8 @@ ds
 
 # 10-b) Correlation heatmap 
 
-#where is output.csv????????
+#where is output.csv???????? - this is only really for the heatmap next (we think), and the pearson corr analysis is very similar to WGCNA so we will be skipping for now 
+#corr analysis is seeing how many mRNA and lncRNA correlated 
 
 # read in the pearson correlation test output  
 corr_result <- read.table("/projectnb/incrna/mary_lncrna/R/repeat/output.csv", header = TRUE, sep="", stringsAsFactors = F)
@@ -470,8 +474,8 @@ for (c in comparisons) {
 }
 # filter out genes which are not differentially expressed for any contrast
 v2 <- v$E[rownames(v) %in% DEGs,] 
-#dim(v2) 
-#dim(v$E)
+dim(v2) 
+dim(v$E)
 # sanity check: 32095 (started with) - 1764 (removed) = 30331 (left)
 # transpose the expression data for further analyses
 datExpr0 <- as.data.frame(t(v2))
@@ -537,18 +541,19 @@ abline(h=0.90,col="red")
 plot(sft$fitIndices[,1], sft$fitIndices[,5], xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n", main = paste("Mean connectivity"))
 text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
 
+#try 12 & 14 maybe?
 
 # ########## Chose powers of 6 and 10 for the following analyses ################# 
 # 11-c) One-step network construction and module detection 
 
 # power of 6 (took 16 min to run)
 net6 <- blockwiseModules(datExpr0, power = 6,
-                         TOMType = "unsigned", minModuleSize = 30,
+                         TOMType = "signed", minModuleSize = 30,
                          reassignThreshold = 0, mergeCutHeight = 0.25,
                          numericLabels = TRUE, pamRespectsDendro = FALSE, verbose = 3)
 # power of 10 (took 16 min to run)
-net10 <- blockwiseModules(datExpr0, power = 10,
-                          TOMType = "unsigned", minModuleSize = 30,
+net10 <- blockwiseModules(datExpr0, power = 12,
+                          TOMType = "signed", minModuleSize = 30,
                           reassignThreshold = 0, mergeCutHeight = 0.25,
                           numericLabels = TRUE, pamRespectsDendro = FALSE, verbose = 3)
 # modules with their number of gene 
@@ -575,6 +580,7 @@ table(trialnet10$colors)
 trialmergedColors10 <- labels2colors(trialnet10$colors)
 plotDendroAndColors(trialnet10$dendrograms[[1]], trialmergedColors10[trialnet10$blockGenes[[1]]], "Module colors", dendroLabels = FALSE, hang = 0.03,addGuide = TRUE, guideHang = 0.05, main = "Cluster dendrogram and trait heatmap (power of 10 with mergeCutHeight = 0)")
 
+#dendrogram looks weird, come back to this!!!!!
 
 # 11-d-1) Quantifying module–trait associations - without separating the traits/conditions 
 
