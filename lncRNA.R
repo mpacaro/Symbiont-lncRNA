@@ -1,3 +1,10 @@
+#.sf file = counts files before put together 
+#use edger over deseq bc of the isoform normalization
+#/projectnb/incrna/mary_lncrna/R
+#save.image(file="filename.RData")
+#load(file="filename.RData")
+
+#https://github.com/jamesfifer/lncRNA
 
 
 # 1) Import needed libraries 
@@ -134,6 +141,7 @@ for (i in 2:ncol(cts)){
   den <- density(lcpm[,i])
   lines(den$x, den$y, col=col[i], lwd=2)
 }
+
 #raw data - out of all reads 0.25 is less than 0 (have really low counts)
 #density = proportion of isoforms to toal isoforms 
 
@@ -142,7 +150,7 @@ for (i in 2:ncol(cts)){
 
 # before normalization  
 boxplot(lcpm, las=2, col=col, main="", cex.axis = 0.8)
-title(main="Before normalization",ylab="Log-cpm")
+title(main="Before Normalization",ylab="Log-cpm")
 # normalization factors = scaling factors for the library sizes
 # for our dataset, the effect of TMM-normalization is mild - the scaling factors are all relatively close to 1
 cts <- calcNormFactors(cts, method = "TMM")
@@ -150,8 +158,10 @@ cts$samples$norm.factors
 # after normalization - very slight difference 
 lcpm <- cpm(cts, log=TRUE)
 boxplot(lcpm, las=2, col=col, main="", cex.axis = 0.8)
-title(main="Normalized data",ylab="Log-cpm")
-
+title(main="After Normalization",ylab="Log-cpm")
+#normalization required to ensure that expression distributions of each sample are similar across experiment 
+#possible figure captions: figures show pre vs post normalization where sample distributions are different before normalization and more similar after. Normalization method is trimmed mean of M-values (TMM). The effect of TMM normalization is mild as the scaling facorts are all close to 1
+#confused why these two figures look so similar, some code is missing from tutorial?
 
 # 8-a) Unsupervised clustering of samples
 
@@ -164,7 +174,7 @@ par(mfrow=c(1,2))
 col.group <- cts$samples$group
 levels(col.group) <-  brewer.pal(nlevels(col.group), "Set1")
 col.group <- as.character(col.group)
-plotMDS(lcpm, labels=cts$samples$group, col=col.group)
+plotMDS(lcpm, labels=cts$samples$group, col=col.group) #plotMDS = multi-dimensional scaling (MDS) plot. plot shows similarities and dissimilarities between samples, gives idea of extent of differential expression before actual formal tests
 title(main="A. Population")
 # temperature plot
 col.temp <- cts$samples$temp
@@ -172,7 +182,7 @@ levels(col.temp) <-  brewer.pal(nlevels(col.temp), "Set2")
 col.temp <- as.character(col.temp)
 plotMDS(lcpm, labels=cts$samples$temp, col=col.temp)
 title(main="B. Temperature")
-# # day has no effect on expression differences -- no cluster -- left out of downstream anayses 
+# # day has no effect on expression differences -- no cluster -- left out of downstream analyses 
 # col.day <- cts$samples$day
 # levels(col.day) <-  brewer.pal(nlevels(col.day), "Set3")
 # col.day <- as.character(col.day)
@@ -183,9 +193,11 @@ par(mfrow=c(1,1))
 plotMDS(lcpm, labels=paste(cts$samples$group, cts$samples$day, cts$samples$temp, sep="."), cex=0.75, xlim=c(-4, 5))
 title(main="Population-Day-Temperature")
 #plot shows temps on day 1, 9, 13 (27C)
+#not the prettiest plot
 
 
 # 8-b) Separating lncRNAs and mRNAs and creating dgeObj for each 
+#this is not in tutorial 
 
 # list of genes 
 gene_id <- data.frame(rownames(cts)) 
@@ -226,6 +238,7 @@ mcts$samples$temp <- as.factor(samples$temp)
 
 # 8-c) MDS plots for lncRNAs and mRNAs separately...also plotting the total again for comparison 
 
+
 par(mfrow=c(1,3))
 # lncRNA - different from the other two clusterings
 log_lcts <- cpm(lcts, log=TRUE)
@@ -260,6 +273,7 @@ contr.matrix <- makeContrasts(
   MI.32CvsSM.32C = MI.32C - SM.32C,
   levels = colnames(design))
 #contr.matrix
+
 # removing heteroscedascity from count data so that variance is no longer dependent on the mean expression level - the difference can be seen in the plots 
 par(mfrow=c(1,2))
 v <- voom(cts, design, plot=TRUE) 
@@ -339,6 +353,7 @@ mycol <- colorpanel(1000,"blue","white","red")
 svg("myheatmap.svg", width=20, height=16)
 heatmap.2(lcpm[i,], scale="row", labRow=rownames(v)[i], labCol=gt, col=mycol, trace="none", density.info="none", margin=c(8,6), lhei=c(2,10), dendrogram="column") 
 
+#the quality of this figure is bad - fix!!!!!!!!!
 
 # 10-a) Pearson correlation between mRNA vs lncRNA - produces a table with gene IDs, corr values, and p-value 
 getwd()
@@ -377,10 +392,10 @@ ds
 
 # 10-b) Correlation heatmap 
 
-#might need to change csv!!!!!!!!!!!!!!
+#where is output.csv????????
 
 # read in the pearson correlation test output  
-corr_result <- read.table("/projectnb2/bi594/mpacaro/lncRNA/corr_result_1hr.csv", header = TRUE, sep="", stringsAsFactors = F)
+corr_result <- read.table("/projectnb/incrna/mary_lncrna/R/repeat/output.csv", header = TRUE, sep="", stringsAsFactors = F)
 head(corr_result)
 # 1345 interactions
 #dim(corr_result)  
