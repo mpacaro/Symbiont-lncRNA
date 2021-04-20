@@ -1,15 +1,17 @@
 #.sf file = counts files before put together 
 #use edger over deseq bc of the isoform normalization
 #/projectnb/incrna/mary_lncrna/R
-#save.image(file="filename.RData")
+
+save.image(file="lncRNA.RData")
 #load(file="filename.RData")
 
 #https://github.com/jamesfifer/lncRNA
 
 
+
 # 1) Import needed libraries 
 
-#BiocManager::install("") #used to install bioconductor packages 
+BiocManager::install("labels2colors") #used to install bioconductor packages 
 library(tximport) 
 library(dplyr)
 library(ggplot2)
@@ -23,6 +25,7 @@ library(RColorBrewer)
 library(WGCNA)
 library(pander)
 library(gplots)
+
 
 
 # More info:
@@ -63,12 +66,15 @@ View(samples)
 file_names <- paste(samples$sample_id, "_1.transcripts_quant.quant.sf", sep = "")
 # run tximport - outputs abundance, counts, and length matrices (this basically goes through each count file for each sample, takes the columns: EffectiveLength, TPM, NumReads, and puts them in separate matrices with samples as columns and genes as rows)
 txi <- tximport(file_names, type="salmon", txOut=TRUE, countsFromAbundance="lengthScaledTPM") 
+head(txi)
 # create a DGEList object from the "counts" matrix   
 cts <- DGEList(txi$counts)
+head(cts)
+View(cts)
 #cts$counts
 # rename the column names using the "sample_id" column in the "samples" file that was imported at the beginning
 colnames(cts) <- samples$sample_id 
-
+head(cts)
 
 # 3-b) Another way to do step 3-a by only accessing the number of reads coulmn (outputs just a count matrix) and create a DGEList-object
 
@@ -157,12 +163,14 @@ cts <- calcNormFactors(cts, method = "TMM")
 cts$samples$norm.factors
 # after normalization - very slight difference 
 lcpm <- cpm(cts, log=TRUE)
+head(lcpm)
 boxplot(lcpm, las=2, col=col, main="", cex.axis = 0.8)
 title(main="After Normalization",ylab="Log-cpm")
 #normalization required to ensure that expression distributions of each sample are similar across experiment 
 #possible figure captions: figures show pre vs post normalization where sample distributions are different before normalization and more similar after. Normalization method is trimmed mean of M-values (TMM). The effect of TMM normalization is mild as the scaling facorts are all close to 1
 #confused why these two figures look so similar, some code is missing from tutorial?
 head(lcpm)
+write.csv(lcpm, "lcpm.csv") #using this to bring into WGCNA
 # 8-a) Unsupervised clustering of samples
 
 # observing similarities and dissimilarities between samples in an unsupervised manner can give us an idea of the extent to which differential expression can be detected before carrying out formal tests
@@ -450,7 +458,11 @@ ggplot(data = subs_l, aes(x=lncRNA, y=mRNA, fill=corr_coef)) +
   ggtitle("lncRNAs with >100 interactions")
 
 
+
+
+
 # 11) WGCNA 
+
 # 11-a) Setup/prepare data
 # linear modeling 
 vfit2 <- lmFit(v, design)
@@ -541,7 +553,7 @@ abline(h=0.90,col="red")
 plot(sft$fitIndices[,1], sft$fitIndices[,5], xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n", main = paste("Mean connectivity"))
 text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
 
-#try 12 & 14 maybe?
+#try 12 & 14 maybe?, we changed Tomtype to signed (used to be unsigned?)
 
 # ########## Chose powers of 6 and 10 for the following analyses ################# 
 # 11-c) One-step network construction and module detection 
@@ -606,12 +618,17 @@ dim(textMatrix) = dim(moduleTraitCor)
 par(mar = c(6, 8.5, 3, 3))
 labeledHeatmap(Matrix = moduleTraitCor, xLabels = names(datTraits), yLabels = names(MEs),
                ySymbols = names(MEs), colorLabels = FALSE, colors = blueWhiteRed(50), textMatrix = textMatrix, setStdMargins = FALSE, cex.text = 0.5, zlim = c(-1,1), main = paste("Module-trait relationships (power of 6)"))
-# power of 10
+
+#this one has 12 modules
+
+# power of 10 (actually power of 12 - fix names above)
+sizeGrWindow(15,12)
 textMatrix10 = paste(signif(moduleTraitCor10, 2), "\n(", signif(moduleTraitPvalue10, 1), ")", sep = "")
 dim(textMatrix10) = dim(moduleTraitCor10)
 par(mar = c(6, 8.5, 3, 3))
 labeledHeatmap(Matrix = moduleTraitCor10, xLabels = names(datTraits), yLabels = names(MEs_10), ySymbols = names(MEs_10), colorLabels = FALSE, colors = blueWhiteRed(50), textMatrix = textMatrix10, setStdMargins = FALSE, cex.text = 0.5, zlim = c(-1,1), main = paste("Module-trait relationships (power of 10)"))
 
+#this has 9 modules
 
 # 11-d-2) Quantifying module–trait associations and sample dendrogram and condition heatmap - with the traits/conditions separated into multiple columns and set as either 0 or 1
 
@@ -722,7 +739,7 @@ length(uniq_mRNA_allmodules)
 # all of the lncRNAs and mRNAs fell in one of the modules and the results were different from the Pearson correlation results possibly because in the Pearson correlation, we had the threshold cutoffs for the coefficient and p-value which could have lowered the number of lncRNAs while in WGCNA all of the genes are assigned to a module without any cutoff
 
 
-# 11-e-2) lncRNAs and mRNAs found in each module (power of 10)
+# 11-e-2) lncRNAs and mRNAs found in each module (power of 12)
 
 # genes found in each module 
 gry10 <- names(datExpr0)[moduleColors10=="grey"] 
@@ -734,8 +751,10 @@ blk10 <- names(datExpr0)[moduleColors10=="black"]
 grn10 <- names(datExpr0)[moduleColors10=="green"] 
 red10 <- names(datExpr0)[moduleColors10=="red"] 
 pink10 <- names(datExpr0)[moduleColors10=="pink"] 
-man10 <- names(datExpr0)[moduleColors10=="magenta"] 
-pur10 <- names(datExpr0)[moduleColors10=="purple"] 
+#man10 <- names(datExpr0)[moduleColors10=="magenta"] 
+#pur10 <- names(datExpr0)[moduleColors10=="purple"] 
+
+#removing man and pur bc these are results for power 10 not 12
 
 # lncNRAs
 # number of lncRNAs in each module 
@@ -748,10 +767,10 @@ length(grep("^MSTRG", blk10))
 length(grep("^MSTRG", grn10))
 length(grep("^MSTRG", red10))
 length(grep("^MSTRG", pink10))
-length(grep("^MSTRG", man10))
-length(grep("^MSTRG", pur10))
+#length(grep("^MSTRG", man10))
+#length(grep("^MSTRG", pur10))
 ## merge the lncRNAs from each module into one big file   
-lncRNA_allmodules10 <- c(blk10[grep("^MSTRG", blk10)], blu10[grep("^MSTRG", blu10)], man10[grep("^MSTRG", man10)], pink10[grep("^MSTRG", pink10)], tur10[grep("^MSTRG", tur10)], brwn10[grep("^MSTRG", brwn10)], pur10[grep("^MSTRG", pur10)], red10[grep("^MSTRG", red10)], grn10[grep("^MSTRG", grn10)], yelw10[grep("^MSTRG", yelw10)], gry10[grep("^MSTRG", gry10)])
+lncRNA_allmodules10 <- c(blk10[grep("^MSTRG", blk10)], blu10[grep("^MSTRG", blu10)], pink10[grep("^MSTRG", pink10)], tur10[grep("^MSTRG", tur10)], brwn10[grep("^MSTRG", brwn10)], red10[grep("^MSTRG", red10)], grn10[grep("^MSTRG", grn10)], yelw10[grep("^MSTRG", yelw10)], gry10[grep("^MSTRG", gry10)])
 ## remove any repeated genes 
 uniq_lncRNA_allmodules10 <- unique(lncRNA_allmodules10)
 length(uniq_lncRNA_allmodules10)
@@ -767,10 +786,10 @@ length(grep("^mRNA", blk10))
 length(grep("^mRNA", grn10))
 length(grep("^mRNA", red10))
 length(grep("^mRNA", pink10))
-length(grep("^mRNA", man10))
-length(grep("^mRNA", pur10))
+#length(grep("^mRNA", man10))
+#length(grep("^mRNA", pur10))
 ## merge the mRNAs from each module into one big file   
-mRNA_allmodules10 <- c(blk10[grep("^mRNA", blk10)], blu10[grep("^mRNA", blu10)], man10[grep("^mRNA", man10)], pink10[grep("^mRNA", pink10)], tur10[grep("^mRNA", tur10)], brwn10[grep("^mRNA", brwn10)], pur10[grep("^mRNA", pur10)], red10[grep("^mRNA", red10)], grn10[grep("^mRNA", grn10)], yelw10[grep("^mRNA", yelw10)], gry10[grep("^mRNA", gry10)])
+mRNA_allmodules10 <- c(blk10[grep("^mRNA", blk10)], blu10[grep("^mRNA", blu10)], pink10[grep("^mRNA", pink10)], tur10[grep("^mRNA", tur10)], brwn10[grep("^mRNA", brwn10)], red10[grep("^mRNA", red10)], grn10[grep("^mRNA", grn10)], yelw10[grep("^mRNA", yelw10)], gry10[grep("^mRNA", gry10)])
 ## remove any repeated genes 
 uniq_mRNA_allmodules10 <- unique(mRNA_allmodules10)
 length(uniq_mRNA_allmodules10)
@@ -841,3 +860,5 @@ for (mod in 1:ncol(geneModuleMembership10)){
 geneOrder10 <- order(geneInfo0_10$moduleColor , -abs(geneInfo0_10$GS.temp))
 geneInfo10 <- geneInfo0_10[geneOrder10, ]
 head(geneInfo10, 5)
+View(geneInfo10)
+write.csv(geneInfo10, "geneInfo10.csv")
