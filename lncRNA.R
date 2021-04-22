@@ -53,6 +53,7 @@ colnames(samples)[1:5] <- c("sample_id","population","time_point","temp","tolera
 # substitute "day -1" with "day 1" in the time_point column
 samples$time_point <- gsub("-1", "1", samples$time_point) 
 View(samples)
+write.csv(samples, "samples.csv")
 
 
 # unzip the count files and place them in another directory - run on the command line/terminal and only need to run once  
@@ -113,6 +114,7 @@ M <- median(cts$samples$lib.size) * 1e-6
 c(L, M) # 3.758108 3.837114
 
 
+
 # 5) Removing genes that are lowly expressed
 
 # 1.4% of genes in the dataset have zero counts across all 48 samples
@@ -171,6 +173,7 @@ title(main="After Normalization",ylab="Log-cpm")
 #confused why these two figures look so similar, some code is missing from tutorial?
 head(lcpm)
 write.csv(lcpm, "lcpm.csv") #using this to bring into WGCNA
+
 # 8-a) Unsupervised clustering of samples
 
 # observing similarities and dissimilarities between samples in an unsupervised manner can give us an idea of the extent to which differential expression can be detected before carrying out formal tests
