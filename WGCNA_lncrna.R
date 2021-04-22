@@ -30,14 +30,15 @@ gsg$allOK #if TRUE, no outlier genes, if false run the script below
 #gsg$allOK 
 #dim(datExpr0) 
 
-#!!!!!help dont know what trait data file is for our data!!!
+#!!!!!help dont know what trait data file is for our data!!! 
 #maybe samples.txt?
 
-### Outlier detection incorporated into trait measures. 
-traitData= read.csv("samples.csv", row.names=1)
+### Outlier detection incorporated into trait measures.
+setwd("/projectnb/bi594/mpacaro/lncRNA/")
+traitData= read.csv("samples_traits.csv", row.names=1)
 dim(traitData)
 head(traitData)
-names(traitData)
+names(traitData) #check to make sure names are the same (traits table and gene expression files)
 
 # Form a data frame analogous to expression data that will hold the clinical traits.
 dim(datExpr0)
@@ -51,8 +52,9 @@ table(rownames(datTraits)==rownames(datExpr0)) #should return TRUE if datasets a
 head(datTraits)
 head(datExpr0)
 
+#making adjaceny matrix to show how linked genes are
 #sample dendrogram and trait heat map showing outliers
-A=adjacency(t(datExpr0),type="signed")
+A=adjacency(t(datExpr0),type="signed") #default is unsigned, we are using signed here
 # this calculates the whole network connectivity we choose signed because we care about direction of gene expression
 k=as.numeric(apply(A,2,sum))-1
 # standardized connectivity
@@ -76,7 +78,9 @@ plotDendroAndColors(sampleTree,groupLabels=names(datColors), colors=datColors,ma
 # datExpr=datExpr0[!remove.samples,]
 # datTraits=datTraits[!remove.samples,]
 
-save(datExpr0, datTraits, file="Crep_Samples_Traits_ALL.RData")
+save(datExpr0, datTraits, file="lncRNA_Samples_Traits_ALL.RData")
+#save what we just did as Rdata
+
 
 ################Moving on!  Network construction and module detection - this section can take a lot of time you might consider running it on a cluster for a larger dataset
 library(WGCNA)
@@ -84,14 +88,14 @@ library(flashClust)
 options(stringsAsFactors = FALSE)
 #enableWGCNAThreads() use this in base R
 allowWGCNAThreads() 
-lnames = load(file="Crep_Samples_Traits_ALL.RData")
+lnames = load(file="lncRNA_Samples_Traits_ALL.RData")
 
 #Figure out proper SFT
 # Choose a set of soft-thresholding powers
 powers = c(seq(1,14,by=2), seq(15,30, by=0.5)); #may need to adjust these power values to hone in on proper sft value
 # Call the network topology analysis function
 sft = pickSoftThreshold(datExpr0, powerVector = powers, networkType="signed", verbose = 2) #want smallest value, closest to 0.9 (but still under)
-
+sft
 # Plot the results:
 sizeGrWindow(9, 5)
 par(mfrow = c(1,2));
@@ -99,22 +103,28 @@ cex1 = 0.9;
 # Scale-free topology fit index as a function of the soft-thresholding power
 plot(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
      xlab="Soft Threshold (power)",ylab="Scale Free Topology Model Fit,signed R^2",type="n",
-     main = paste("Scale independence"));
+     main = paste("Scale independence"), ylim=c(0,1));
 text(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
      labels=powers,cex=cex1,col="red");
 # this line corresponds to using an R^2 cut-off of h
-abline(h=0.90,col="red")
+abline(h=0.90,col="red") 
 # Mean connectivity as a function of the soft-thresholding power
 plot(sft$fitIndices[,1], sft$fitIndices[,5],
      xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n",
      main = paste("Mean connectivity"))
 text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
 
-softPower=13 #smallest value to plateau at ~0.85
-adjacency=adjacency(datExpr0, power=softPower,type="signed") #must change method type here too!!
+#making these plots allows us to pick our soft threshold - pick the value that is under the red line
+#here our R^2 values do not go above the 0.90 line.. we are continuing and picking softpower=15 bc thats where it looks like it levels off
+#mary also used 0.90
+
+softPower=15 #smallest value to plateau at ~0.80
+adjacency=adjacency(datExpr0, power=softPower,type="signed") 
 #translate the adjacency into topological overlap matrix and calculate the corresponding dissimilarity:
 TOM= TOMsimilarity(adjacency,TOMType = "signed")
 dissTOM= 1-TOM
+
+#this part above takes a while
 
 library(flashClust)
 geneTree= flashClust(as.dist(dissTOM), method="average")
@@ -123,22 +133,21 @@ sizeGrWindow(10,6)
 plot(geneTree, xlab="", sub="", main= "Gene Clustering on TOM-based dissimilarity", labels= FALSE,hang=0.04)
 # dev.off()
 #each leaf corresponds to a gene, branches grouping together densely are interconnected, highly co-expressed genes
+#ridiculogram - y axis is dissimilarity so lines that extend far down are genes most closely related, genes at the top are more dissimilar
 
+#chosing module size, will be diff for each proj
+#module size = number of genes in each module, they picked 90 for GO enrichment downstream
 minModuleSize=90 #we only want large modules
 dynamicMods= cutreeDynamic(dendro= geneTree, distM= dissTOM, deepSplit=2, pamRespectsDendro= FALSE, minClusterSize= minModuleSize)
 table(dynamicMods)
+#should show modules and they should all be bigger than 90
+#each module gets number and size 
 
-# # dynamicMods
 #dynamicMods
-#1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17   18   19 
-#1164  576  415  325  272  263  259  258  249  244  241  236  232  222  219  212  206  198  192 
-#20   21   22   23   24   25   26   27   28   29   30   31   32   33   34   35   36   37   38 
-#185  184  183  182  180  178  177  176  175  172  170  165  163  158  158  157  157  153  152 
-#39   40   41   42   43   44   45   46   47   48   49   50   51   52   53   54   55   56   57 
-#150  145  144  141  137  137  135  134  133  133  131  130  129  126  123  118  118  116  112 
-#58   59   60   61   62   63   64   65   66 
-#111  104  100   99   97   96   94   93   91
+#1    2    3    4    5    6    7    8    9   10   11   12   13   14   15 
+#6730 6224 5578 5184 1453 1147 1011  935  838  668  539  536  505  395  352 
 
+#now we are assigning colors instead of the numbers above
 dynamicColors= labels2colors(dynamicMods)
 #plot dendrogram and colors underneath, pretty sweet
 sizeGrWindow(8,6)
@@ -153,14 +162,14 @@ MEDiss= 1-cor(MEs)
 #Cluster module eigengenes
 METree= flashClust(as.dist(MEDiss), method= "average")
 
-save(dynamicMods, MEList, MEs, MEDiss, METree, file= "Network_crep_nomerge.RData")
+save(dynamicMods, MEList, MEs, MEDiss, METree, file= "Network_lncrna_nomerge.RData")
 
-lnames = load(file = "Network_crep_nomerge.RData")
+lnames = load(file = "Network_lncrna_nomerge.RData")
 #plot
 sizeGrWindow(7,6)
-plot(METree, main= "Clustering of module eigengenes", xlab= "", sub= "")
+plot(METree, main= "Clustering of module eigengenes", xlab= "", sub= "") #save this figure and showwith modtrait heatmap at same time
 
-MEDissThres= 0.6
+MEDissThres= 0 #0.6 #start with 0, look at modtrait heatmap
 abline(h=MEDissThres, col="red")
 
 merge= mergeCloseModules(datExpr0, dynamicColors, cutHeight= MEDissThres, verbose =3)
@@ -178,19 +187,19 @@ moduleLabels= match(moduleColors, colorOrder)-1
 MEs=mergedMEs
 
 #save module colors and labels for use in subsequent parts
-save(MEs, moduleLabels, moduleColors, geneTree, file= "Network_signed_0.6.RData")
+save(MEs, moduleLabels, moduleColors, geneTree, file= "Network_signed_0.RData")
 
 ###############Relating modules to traits and finding important genes
 library(WGCNA)
 # The following setting is important, do not omit.
 options(stringsAsFactors = FALSE);
 # Load the expression and trait data saved in the first part
-lnames = load(file = "Crep_Samples_Traits_ALL.RData");
+lnames = load(file = "lncrna_Samples_Traits_ALL.RData");
 #The variable lnames contains the names of loaded variables.
 lnames
 # Load network data saved in the second part.
-lnames = load(file = "Network_signed_0.6.RData");
-lnames = load(file = "Network_crep_nomerge.RData");
+lnames = load(file = "Network_signed_0.RData");
+lnames = load(file = "Network_lncrna_nomerge.RData");
 lnames
 
 nGenes = ncol(datExpr0)
