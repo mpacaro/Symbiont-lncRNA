@@ -155,7 +155,7 @@ plotDendroAndColors(geneTree, dynamicColors, "Dynamic Tree Cut", dendroLabels= F
 
 #Merg modules whose expression profiles are very similar
 #calculate eigengenes
-MEList= moduleEigengenes(datExpr0, colors= dynamicColors,softPower = 13)
+MEList= moduleEigengenes(datExpr0, colors= dynamicColors,softPower = 15)
 MEs= MEList$eigengenes
 #Calculate dissimilarity of module eigenegenes
 MEDiss= 1-cor(MEs)
@@ -169,7 +169,10 @@ lnames = load(file = "Network_lncrna_nomerge.RData")
 sizeGrWindow(7,6)
 plot(METree, main= "Clustering of module eigengenes", xlab= "", sub= "") #save this figure and showwith modtrait heatmap at same time
 
-MEDissThres= 0 #0.6 #start with 0, look at modtrait heatmap
+MEDissThres= 0.3 #0.6 #start with 0, look at modtrait heatmap
+#0.5 is overcollapsing (4 modules)
+#0.3 gives 5 modules
+#0.2 gives 8 modules
 abline(h=MEDissThres, col="red")
 
 merge= mergeCloseModules(datExpr0, dynamicColors, cutHeight= MEDissThres, verbose =3)
@@ -187,7 +190,7 @@ moduleLabels= match(moduleColors, colorOrder)-1
 MEs=mergedMEs
 
 #save module colors and labels for use in subsequent parts
-save(MEs, moduleLabels, moduleColors, geneTree, file= "Network_signed_0.RData")
+save(MEs, moduleLabels, moduleColors, geneTree, file= "Network_signed_0.3.RData")
 
 ###############Relating modules to traits and finding important genes
 library(WGCNA)
@@ -198,7 +201,7 @@ lnames = load(file = "lncrna_Samples_Traits_ALL.RData");
 #The variable lnames contains the names of loaded variables.
 lnames
 # Load network data saved in the second part.
-lnames = load(file = "Network_signed_0.RData");
+lnames = load(file = "Network_signed_0.3.RData");
 lnames = load(file = "Network_lncrna_nomerge.RData");
 lnames
 
