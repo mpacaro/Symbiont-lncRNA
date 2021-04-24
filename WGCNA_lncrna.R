@@ -30,11 +30,10 @@ gsg$allOK #if TRUE, no outlier genes, if false run the script below
 #gsg$allOK 
 #dim(datExpr0) 
 
-#!!!!!help dont know what trait data file is for our data!!! 
-#maybe samples.txt?
 
 ### Outlier detection incorporated into trait measures.
 setwd("/projectnb/bi594/mpacaro/lncRNA/")
+getwd()
 traitData= read.csv("samples_traits.csv", row.names=1)
 dim(traitData)
 head(traitData)
@@ -169,10 +168,9 @@ lnames = load(file = "Network_lncrna_nomerge.RData")
 sizeGrWindow(7,6)
 plot(METree, main= "Clustering of module eigengenes", xlab= "", sub= "") #save this figure and showwith modtrait heatmap at same time
 
-MEDissThres= 0.3 #0.6 #start with 0, look at modtrait heatmap
-#0.5 is overcollapsing (4 modules)
-#0.3 gives 5 modules
-#0.2 gives 8 modules
+MEDissThres= 0.35 #0.6 #start with 0, look at modtrait heatmap
+#0.35 gives 5 modules
+
 abline(h=MEDissThres, col="red")
 
 merge= mergeCloseModules(datExpr0, dynamicColors, cutHeight= MEDissThres, verbose =3)
@@ -184,16 +182,17 @@ pdf(file="MergeNetwork.pdf", width=20, height=20)
 plotDendroAndColors(geneTree, cbind(dynamicColors, mergedColors), c("Dynamic Tree Cut", "Merged dynamic"), dendroLabels= FALSE, hang=0.03, addGuide= TRUE, guideHang=0.05)
 dev.off()
 
+#ordering our colors here 
 moduleColors= mergedColors
 colorOrder= c("grey", standardColors(50))
 moduleLabels= match(moduleColors, colorOrder)-1
 MEs=mergedMEs
 
 #save module colors and labels for use in subsequent parts
-save(MEs, moduleLabels, moduleColors, geneTree, file= "Network_signed_0.3.RData")
+save(MEs, moduleLabels, moduleColors, geneTree, file= "Network_signed_0.35.RData")
 
 ###############Relating modules to traits and finding important genes
-library(WGCNA)
+#bring in our traits and bring in 2 datasets 
 # The following setting is important, do not omit.
 options(stringsAsFactors = FALSE);
 # Load the expression and trait data saved in the first part
@@ -201,19 +200,18 @@ lnames = load(file = "lncrna_Samples_Traits_ALL.RData");
 #The variable lnames contains the names of loaded variables.
 lnames
 # Load network data saved in the second part.
-lnames = load(file = "Network_signed_0.3.RData");
+lnames = load(file = "Network_signed_0.35.RData");
 lnames = load(file = "Network_lncrna_nomerge.RData");
 lnames
 
+#how wgcna calls our modules
 nGenes = ncol(datExpr0)
 nSamples = nrow(datExpr0)
 table(moduleColors)
 
 #moduleColors
-#black         blue       coral2     darkgrey  floralwhite       grey60        ivory 
-#1338         2928         1167         1088          895          206          564 
-#mediumorchid   orangered4       purple    steelblue 
-#478         1557          615         1749 
+#brown greenyellow     magenta      salmon   turquoise 
+#14157         891        2441         505       14101 
 
 # Recalculate MEs with color labels
 MEs0 = moduleEigengenes(datExpr0, moduleColors)$eigengenes
@@ -222,7 +220,7 @@ moduleTraitCor = cor(MEs, datTraits, use = "p");
 moduleTraitPvalue = corPvalueStudent(moduleTraitCor, nSamples);
 
 #represent module trait correlations as a heatmap
-quartz()
+#quartz()
 sizeGrWindow(10,6)
 # Will display correlations and their p-values
 textMatrix = paste(signif(moduleTraitCor, 2), "\n(",
@@ -242,10 +240,16 @@ labeledHeatmap(Matrix = moduleTraitCor,
                zlim = c(-1,1),
                main = paste("Module-trait relationships"))
 
+#include trait heatmap
+#the number in the heatmap can be interpreted as ___% of the variation is explained by this trait
+
+
 #Gene relationship to trait and important modules:
 # Define variable weight containing the weight column of datTrait - leave weight as variable, but change names in first 2 commands
-weight = as.data.frame(datTraits$pH7.5); #change Lipidrobust to your trait name
-names(weight) = "pH7.5"
+weight = as.data.frame(datTraits$sensitive.temp27); #change Lipidrobust to your trait name
+
+#not sure what the trait name should be 
+names(weight) = "sensitive.temp27"
 # names (colors) of the modules
 modNames = substring(names(MEs), 3)
 geneModuleMembership = as.data.frame(cor(datExpr0, MEs, use = "p"));
@@ -259,7 +263,7 @@ names(GSPvalue) = paste("p.GS.", names(weight), sep="")
 
 #Gene-trait significance correlation plots
 # par(mfrow=c(2,3))
-module = "coral2"
+module = "brown"
 column = match(module, modNames);
 moduleGenes = moduleColors==module;
 sizeGrWindow(7, 7);
@@ -267,30 +271,35 @@ par(mfrow = c(1,1));
 verboseScatterplot(abs(geneModuleMembership[moduleGenes, column]),
                    abs(geneTraitSignificance[moduleGenes, 1]),
                    xlab = paste("ModMem in", module, "module"),
-                   ylab = "Gene Sig for pH7.5",
+                   ylab = "Gene Sig for sensitive.temp27",
                    main = paste("MM vs. GS\n"),
                    cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = module)
 
+#brown module and sensitive.temp27 are highly correlated
+#could create these figures for each of the modules you find interesting that you want to further explore 
+
+
 #Making VSD files by module for GO plot functions
 vs=t(datExpr0)
-cands=names(datExpr0[moduleColors=="coral2"]) #black  blue brown green  grey  pink   red 
+cands=names(datExpr0[moduleColors=="brown"]) #black  blue brown green  grey  pink   red 
 
 c.vsd=vs[rownames(vs) %in% cands,]
 head(c.vsd)
-nrow(c.vsd) #should correspond to module size
+nrow(c.vsd) #should correspond to module size,  brown = 14157
 table(moduleColors)
 #moduleColors
-#black         blue       coral2     darkgrey  floralwhite       grey60        ivory 
-#1338         2928         1167         1088          895          206          564 
-#mediumorchid   orangered4       purple    steelblue 
-#478         1557          615         1749
+#brown greenyellow     magenta      salmon 
+#14157         891        2441         505 
+#turquoise 
+#14101 
 head(c.vsd)
-write.csv(c.vsd,"rlog_MMcoral2.csv",quote=F)
+write.csv(c.vsd,"rlog_MMbrown.csv",quote=F)
+#this is all of the genes in the brown module it is creating csv with that subset of data
 
 ##############################heatmap of module expression with bar plot of eigengene, no resorting of samples...
 #names(dis)
 sizeGrWindow(8,7);
-which.module="coral2" #pick module of interest
+which.module="brown" #pick module of interest
 ME=MEs[, paste("ME",which.module, sep="")]
 genes=datExpr0[,moduleColors==which.module ] #replace where says subgene below to plot all rather than just subset
 
@@ -320,6 +329,9 @@ plotMat(t(scale(genes) ),nrgcols=30,rlabels=F, clabels=rownames(genes), rcols=wh
 par(mar=c(5, 4.2, 0, 0.7))
 barplot(trait, col=which.module, main="", cex.main=2,
         ylab="fvfm",xlab="sample")#change trait of interest here
+
+
+
 
 #Gene relationship to trait and important modules: Gene Significance and Module membership
 allkME =as.data.frame(signedKME(t(dat), MEs))
