@@ -168,7 +168,7 @@ lnames = load(file = "Network_lncrna_nomerge.RData")
 sizeGrWindow(7,6)
 plot(METree, main= "Clustering of module eigengenes", xlab= "", sub= "") #save this figure and showwith modtrait heatmap at same time
 
-MEDissThres= 0.35 #0.6 #start with 0, look at modtrait heatmap
+MEDissThres= 0.3  #0.6 #start with 0, look at modtrait heatmap
 #0.35 gives 5 modules
 
 abline(h=MEDissThres, col="red")
