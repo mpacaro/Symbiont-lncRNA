@@ -168,7 +168,7 @@ lnames = load(file = "Network_lncrna_nomerge.RData")
 sizeGrWindow(7,6)
 plot(METree, main= "Clustering of module eigengenes", xlab= "", sub= "") #save this figure and showwith modtrait heatmap at same time
 
-MEDissThres= 0.3  #0.6 #start with 0, look at modtrait heatmap
+MEDissThres= 0.35  #0.6 #start with 0, look at modtrait heatmap
 #0.35 gives 5 modules
 
 abline(h=MEDissThres, col="red")
@@ -196,8 +196,9 @@ save(MEs, moduleLabels, moduleColors, geneTree, file= "Network_signed_0.35.RData
 # The following setting is important, do not omit.
 options(stringsAsFactors = FALSE);
 # Load the expression and trait data saved in the first part
-lnames = load(file = "lncrna_Samples_Traits_ALL.RData");
+lnames = load(file = "lncRNA_Samples_Traits_ALL.RData");
 #The variable lnames contains the names of loaded variables.
+
 lnames
 # Load network data saved in the second part.
 lnames = load(file = "Network_signed_0.35.RData");
@@ -209,7 +210,7 @@ nGenes = ncol(datExpr0)
 nSamples = nrow(datExpr0)
 table(moduleColors)
 
-#moduleColors
+#moduleColors for 0.35 threshold
 #brown greenyellow     magenta      salmon   turquoise 
 #14157         891        2441         505       14101 
 
