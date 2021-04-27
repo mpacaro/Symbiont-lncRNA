@@ -164,7 +164,7 @@ title(main="Before Normalization",ylab="Log-cpm")
 cts <- calcNormFactors(cts, method = "TMM")
 cts$samples$norm.factors
 # after normalization - very slight difference 
-lcpm <- cpm(cts, log=TRUE)
+lcpm <- cpm(cts, log=TRUE) #lcpm might be the log of cpm?
 head(lcpm)
 boxplot(lcpm, las=2, col=col, main="", cex.axis = 0.8)
 title(main="After Normalization",ylab="Log-cpm")
@@ -227,9 +227,13 @@ gene_id <- c(gene_id1,gene_id2)
 # separate count data into lncRNAs and mRNAs 
 lds <- subset(cts$counts, rownames(cts) %in% lncRNA$rownames.cts.) # lncRNA expression matrix
 mds <- subset(cts$counts, rownames(cts) %in% mRNA$rownames.cts.) # mRNA expression matrix 
+head(lds)
+
 # creating dgeObj for lncRNA and mRNA count files 
 lcts <- DGEList(lds)
 mcts <- DGEList(mds)
+head(lcts)
+head(mcts) 
 # similar to step 4 - account for the different conditions
 # lncRNA dgeObj
 # update "group" column to categorize the samples into the two populations 
@@ -684,6 +688,8 @@ plotDendroAndColors(sampleTree2, traitColors_sep, groupLabels = names(sepTraits)
 
 
 # 11-e-1) lncRNAs and mRNAs found in each module (power of 6)
+
+head(datExpr0)
 
 # genes found in each module 
 red <- names(datExpr0)[moduleColors=="red"] 
