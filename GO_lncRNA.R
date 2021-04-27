@@ -16,14 +16,15 @@
 # First, press command-D on mac or ctrl-shift-H in Rstudio and navigate to the directory containing scripts and input files. Then edit, mark and execute the following bits of code, one after another.
 setwd("/projectnb/bi594/ganyy825/lncRNA/")
 setwd("/projectnb/bi594/mpacaro/lncRNA/")
+getwd()
 
+#brown module 
 # Edit these to match your data file names: 
-input="SRR2298846.csv" # two columns of comma-separated values: gene id, continuous measure of significance. To perform standard GO enrichment analysis based on Fisher's exact test, use binary measure (0 or 1, i.e., either sgnificant or not).
+input="rlog_MMbrown.csv" # two columns of comma-separated values: gene id, continuous measure of significance. To perform standard GO enrichment analysis based on Fisher's exact test, use binary measure (0 or 1, i.e., either sgnificant or not).
 goAnnotations="transcript2go.tab" # two-column, tab-delimited, one line per gene, multiple GO terms separated by semicolon. If you have multiple lines per gene, use nrify_GOtable.pl prior to running this script.
 goDatabase="go.obo" # download from http://www.geneontology.org/GO.downloads.ontology.shtml
 goDivision="CC" # either MF, or BP, or CC
 source("gomwu.functions.R")
-
 
 # Calculating stats. It might take ~3 min for MF and BP. Do not rerun it if you just want to replot the data with different cutoffs, go straight to gomwuPlot. If you change any of the numeric values below, delete the files that were generated in previos runs first.
 gomwuStats(input, goDatabase, goAnnotations, goDivision,# replace with full path to perl executable if it is not in your system's PATH already
@@ -35,7 +36,7 @@ gomwuStats(input, goDatabase, goAnnotations, goDivision,# replace with full path
            #	Module=TRUE # un-remark this if you are analyzing an UNSIGNED WGCNA module 
 )
 # do not continue if the printout shows that no GO terms pass 10% FDR.
-
+#brown has 15 GO terms at 10% FDR
 
 # Plotting results
 #quartz()
@@ -54,3 +55,11 @@ results=gomwuPlot(input,goAnnotations,goDivision,
 
 # text representation of results, with actual adjusted p-values
 results
+
+
+
+
+
+
+
+

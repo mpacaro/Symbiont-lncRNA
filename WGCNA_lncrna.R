@@ -247,64 +247,46 @@ labeledHeatmap(Matrix = moduleTraitCor,
 
 #######################this is code from Mary's script to find # of mRNA and lncRNA in each module##################################
 # genes found in each module 
-red <- names(datExpr0)[moduleColors=="red"] 
-blu <- names(datExpr0)[moduleColors=="blue"] 
-tur <- names(datExpr0)[moduleColors=="turquoise"] 
-yelw <- names(datExpr0)[moduleColors=="yellow"] 
-gry <- names(datExpr0)[moduleColors=="grey"] 
+gyell <- names(datExpr0)[moduleColors=="greenyellow"] 
+turq <- names(datExpr0)[moduleColors=="turquoise"] 
+mag <- names(datExpr0)[moduleColors=="magenta"] 
 brwn <- names(datExpr0)[moduleColors=="brown"] 
-blk <- names(datExpr0)[moduleColors=="black"] 
-grn <- names(datExpr0)[moduleColors=="green"] 
-man <- names(datExpr0)[moduleColors=="magenta"] 
-pink <- names(datExpr0)[moduleColors=="pink"] 
-pur <- names(datExpr0)[moduleColors=="purple"] 
-gyellow <- names(datExpr0)[moduleColors=="greenyellow"] 
+salmon <- names(datExpr0)[moduleColors=="salmon"] 
 # lncNRAs
 # number of lncRNAs in each module 
-length(grep("^MSTRG", red))
-length(grep("^MSTRG", blu))
-length(grep("^MSTRG", tur))
-length(grep("^MSTRG", yelw))
-length(grep("^MSTRG", gry))
-length(grep("^MSTRG", brwn))
-length(grep("^MSTRG", blk))
-length(grep("^MSTRG", grn))
-length(grep("^MSTRG", man))
-length(grep("^MSTRG", pink))
-length(grep("^MSTRG", pur))
-length(grep("^MSTRG", gyellow))
+length(grep("^MSTRG", gyell)) #118
+length(grep("^MSTRG", turq)) #2271
+length(grep("^MSTRG", mag)) #300
+length(grep("^MSTRG", brwn)) #5149
+length(grep("^MSTRG", salmon)) #59
+
+#sum(118+2271+300+5149+59), sanity check, this matches the total length of lncRNAs below
 ## merge the lncRNAs from each module into one big file   
-lncRNA_allmodules <- c(blk[grep("^MSTRG", blk)], blu[grep("^MSTRG", blu)], gyellow[grep("^MSTRG", gyellow)], man[grep("^MSTRG", man)], pink[grep("^MSTRG", pink)], tur[grep("^MSTRG", tur)], brwn[grep("^MSTRG", brwn)], pur[grep("^MSTRG", pur)], red[grep("^MSTRG", red)], grn[grep("^MSTRG", grn)], yelw[grep("^MSTRG", yelw)], gry[grep("^MSTRG", gry)])
-#length(lncRNA_allmodules) # 7339
+lncRNA_allmodules <- c(gyell[grep("^MSTRG", gyell)], turq[grep("^MSTRG", turq)], mag[grep("^MSTRG", mag)], brwn[grep("^MSTRG", brwn)], salmon[grep("^MSTRG", salmon)])
+length(lncRNA_allmodules) # 7897
 ## remove any repeated genes 
 uniq_lncRNA_allmodules <- unique(lncRNA_allmodules)
 length(uniq_lncRNA_allmodules)
-# 7339 lncRNAs - no overlapping lncRNAs among modules 
+# 7897 lncRNAs - no overlapping lncRNAs among modules 
+
 # mRNAs
 # number of mRNAs in each module 
-length(grep("^mRNA", red))
-length(grep("^mRNA", blu))
-length(grep("^mRNA", tur))
-length(grep("^mRNA", yelw))
-length(grep("^mRNA", gry))
-length(grep("^mRNA", brwn))
-length(grep("^mRNA", blk))
-length(grep("^mRNA", grn))
-length(grep("^mRNA", man))
-length(grep("^mRNA", pink))
-length(grep("^mRNA", pur))
-length(grep("^mRNA", gyellow))
+length(grep("^mRNA", gyell)) #773
+length(grep("^mRNA", turq)) #11830
+length(grep("^mRNA", mag)) #2141
+length(grep("^mRNA", brwn)) #9008
+length(grep("^mRNA", salmon)) #446
+
 ## merge the mRNAs from each module into one big file   
-mRNA_allmodules <- c(blk[grep("^mRNA", blk)], blu[grep("^mRNA", blu)], gyellow[grep("^mRNA", gyellow)], man[grep("^mRNA", man)], pink[grep("^mRNA", pink)], tur[grep("^mRNA", tur)], brwn[grep("^mRNA", brwn)], pur[grep("^mRNA", pur)], red[grep("^mRNA", red)], grn[grep("^mRNA", grn)], yelw[grep("^mRNA", yelw)], gry[grep("^mRNA", gry)])
+mRNA_allmodules <- c(gyell[grep("^mRNA", gyell)], turq[grep("^mRNA", turq)], mag[grep("^mRNA", mag)], brwn[grep("^mRNA", brwn)], salmon[grep("^mRNA", salmon)])
+length(mRNA_allmodules) #24198
 ## remove any repeated genes 
 uniq_mRNA_allmodules <- unique(mRNA_allmodules)
 length(uniq_mRNA_allmodules)
-# 22992 mRNAs - no overlapping mRNAs among modules 
+# 24198 mRNAs - no overlapping mRNAs among modules 
 # all of the lncRNAs and mRNAs fell in one of the modules and the results were different from the Pearson correlation results possibly because in the Pearson correlation, we had the threshold cutoffs for the coefficient and p-value which could have lowered the number of lncRNAs while in WGCNA all of the genes are assigned to a module without any cutoff
 
 ###############################################
-
-
 
 #Gene relationship to trait and important modules:
 # Define variable weight containing the weight column of datTrait - leave weight as variable, but change names in first 2 commands
@@ -343,7 +325,7 @@ verboseScatterplot(abs(geneModuleMembership[moduleGenes, column]),
 
 #Making VSD files by module for GO plot functions
 vs=t(datExpr0)
-cands=names(datExpr0[moduleColors=="brown"]) #black  blue brown green  grey  pink   red 
+cands=names(datExpr0[moduleColors=="brown"]) 
 
 c.vsd=vs[rownames(vs) %in% cands,]
 head(c.vsd)
@@ -357,6 +339,8 @@ table(moduleColors)
 head(c.vsd)
 write.csv(c.vsd,"rlog_MMbrown.csv",quote=F)
 #this is all of the genes in the brown module it is creating csv with that subset of data
+
+
 
 ##############################heatmap of module expression with bar plot of eigengene, no resorting of samples...
 #names(dis)
