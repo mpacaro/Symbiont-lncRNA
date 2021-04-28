@@ -481,10 +481,10 @@ write.csv(inModule,file=paste(whichModule,"_fisher.csv",sep=""),quote=F) #this w
 
 #i think this is for continuous data and not needed for us
 #KME way is how good gene fits to module?
-#modColName=paste("kME",whichModule,sep="")
-#modkME=as.data.frame(allkME[,modColName])
-#row.names(modkME)=row.names(allkME)
-#names(modkME)=modColName
-#write.csv(modkME,file=paste(whichModule,"_kME.csv",sep=""),quote=F)
+modColName=paste("kME",whichModule,sep="")
+modkME=as.data.frame(allkME[,modColName])
+row.names(modkME)=row.names(allkME)
+names(modkME)=modColName
+write.csv(modkME,file=paste(whichModule,"_kME.csv",sep=""),quote=F)
 
 ######--------------------end--------------------#######
