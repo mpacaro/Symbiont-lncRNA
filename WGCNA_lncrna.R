@@ -14,7 +14,7 @@ nrow(dat)
 #32095, this is the same as before (32095 transcripts/isoforms - about 2/3 (67%) of the number that we started with)
 
 datExpr0 = as.data.frame(t(dat))
-
+View(datExpr0)
 
 gsg = goodSamplesGenes(datExpr0, verbose = 3);
 gsg$allOK #if TRUE, no outlier genes, if false run the script below
@@ -257,6 +257,8 @@ labeledHeatmap(Matrix = moduleTraitCor,
 #SALMON - high correlation with sensitive and tolerant 
 
 
+#i think look at magenta with each of the temps and then brown and turqouise at sensitive. temp 27
+
 #######################this is code from Mary's script to find # of mRNA and lncRNA in each module##################################
 # genes found in each module 
 gyell <- names(datExpr0)[moduleColors=="greenyellow"] 
@@ -340,8 +342,7 @@ vs=t(datExpr0)
 cands=names(datExpr0[moduleColors=="brown"]) 
 
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!somthing is wrong with c.vsd it should have treatments in it and it doesnt
-#making the figure below look wrong 
+#making the figure below look wrong but i think its just bc we have a lot of samples?
 c.vsd=vs[rownames(vs) %in% cands,]
 head(c.vsd)
 nrow(c.vsd) #should correspond to module size,  brown = 14157
@@ -397,11 +398,13 @@ barplot(ME, col=which.module, main="", cex.main=2,
 
 #this is KME data
 #Gene relationship to trait and important modules: Gene Significance and Module membership
-allkME =as.data.frame(signedKME(t(dat), MEs))
+
+
+allkME =as.data.frame(signedKME(datExpr0, MEs)) #changed t(dat) to datExpr0 because problems with extra X row 
 head(allkME)
 vsd=read.csv(file="rlog_MMbrown.csv", row.names=1)
 head(vsd)
-gg=read.table("Crep454_iso2gene.tab", sep="\t") #assume this would be the transcript2gene.tab file?????????????????
+gg=read.table("transcript2geneDescription.tab", sep="\t") 
 head(gg)
 library(pheatmap)
 
@@ -410,16 +413,16 @@ whichModule="brown"
 top=100 #looking at the top 100 genes 
 
 datME=MEs
-vsd <- read.csv("Crep_wgcna_allgenes.csv", row.names=1) #this is lcpm.csv for us
+vsd <- read.csv("lcpm.csv", row.names=1) 
 head(vsd)
 datExpr=t(vsd)
 modcol=paste("kME",whichModule,sep="")
 head(vsd)
 sorted=vsd[order(allkME[,modcol],decreasing=T),]
 hubs=sorted[1:top,]
-# attaching gene names
 summary(hubs)
 
+#labeling row names with g names from gg
 gnames=c();counts=0
 for(i in 1:length(hubs[,1])) {
   if (row.names(hubs)[i] %in% gg$V1) { 
@@ -435,40 +438,51 @@ for(i in 1:length(hubs[,1])) {
 } 
 row.names(hubs)=gnames
 length(hubs)
-#labeling row names with gnames from gg
+#48 that are significantly differentially expressed??
+
 
 contrasting = colorRampPalette(rev(c("chocolate1","#FEE090","grey10", "cyan3","cyan")))(100)
 #quartz()
+sizeGrWindow(12,9)
 pheatmap(hubs,scale="row",col=contrasting,border_color=NA, main=paste(whichModule,"top",top,"kME",sep=""))
 #makes heatmap with annotations of genes if they have them
 #genes that assign to color module the best are shown here 
+#~1:21
+#this window is really bad and hard to see what this heatmap says??????????????????
 
 ###fisher for GO - 1 if in module, 0 if not 
+#this is binary way
+#can do this way or KME way (more for continous data?)
 ##########fisher of module vs whole dataset
 library(WGCNA)
-vsd <- read.csv("Crep_wgcna_allgenes.csv", row.names=1) 
+vsd <- read.csv("lcpm.csv", row.names=1) 
 head(vsd)
 options(stringsAsFactors=FALSE)
 data=t(vsd)
+View(data)
 allkME =as.data.frame(signedKME(data, MEs))
 
-whichModule="coral2" # name your color and execute to the end
 
-length(moduleColors) #
+whichModule="brown" # name your color and execute to the end
+
+#now it is just asking which genes are in the module and going to give a 1 or 0
+length(moduleColors) 
 inModule=data.frame("module"=rep(0,nrow(vsd)))
 row.names(inModule)=row.names(vsd)
 genes=row.names(vsd)[moduleColors == whichModule]
 inModule[genes,1]=1
-sum(inModule[,1]) #should be same number of color module chosen above
+sum(inModule[,1]) #should be same number of color module chosen above, sanity check
 head(inModule)
-write.csv(inModule,file=paste(whichModule,"_fisher.csv",sep=""),quote=F)
+write.csv(inModule,file=paste(whichModule,"_fisher.csv",sep=""),quote=F) #this will automatically add the color name you are in to csv
 #will be file with samples and column of 0 or 1
 
+
+#i think this is for continuous data and not needed for us
 #KME way is how good gene fits to module?
-modColName=paste("kME",whichModule,sep="")
-modkME=as.data.frame(allkME[,modColName])
-row.names(modkME)=row.names(allkME)
-names(modkME)=modColName
-write.csv(modkME,file=paste(whichModule,"_kME.csv",sep=""),quote=F)
+#modColName=paste("kME",whichModule,sep="")
+#modkME=as.data.frame(allkME[,modColName])
+#row.names(modkME)=row.names(allkME)
+#names(modkME)=modColName
+#write.csv(modkME,file=paste(whichModule,"_kME.csv",sep=""),quote=F)
 
 ######--------------------end--------------------#######
