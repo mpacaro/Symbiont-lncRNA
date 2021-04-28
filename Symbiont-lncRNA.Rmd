@@ -14,11 +14,26 @@ output: html_document
 
 ## Version Control
 
+R version 4.0.3 was used for all analyses.
+```{}
+
+```
+
+
+
+go.obo version 1.2
 
 
 
 
-## Data Analysis 
+
+## Data Analysis & Methods
+
+First, we loaded all the required packages for our analyses:
+
+BB000000400662
+
+
 
 
 

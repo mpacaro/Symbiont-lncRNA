@@ -15,6 +15,7 @@ nrow(dat)
 
 datExpr0 = as.data.frame(t(dat))
 
+
 gsg = goodSamplesGenes(datExpr0, verbose = 3);
 gsg$allOK #if TRUE, no outlier genes, if false run the script below
 #this is true for us, so we don't need to run the code below
@@ -244,6 +245,17 @@ labeledHeatmap(Matrix = moduleTraitCor,
 #include trait heatmap
 #the number in the heatmap can be interpreted as ___% of the variation is explained by this trait
 
+#for example, can look into highly correlated 
+
+#potential modules of interest
+#BROWN - high correlation with sensitive.temp27
+#TURQUOISE - high correlation with sensitive.temp27
+
+#GREENYELLOW - high correlation with temp27 and temp32
+#MAGENTA - high correlation with temp 27 and temp 32
+
+#SALMON - high correlation with sensitive and tolerant 
+
 
 #######################this is code from Mary's script to find # of mRNA and lncRNA in each module##################################
 # genes found in each module 
@@ -318,7 +330,7 @@ verboseScatterplot(abs(geneModuleMembership[moduleGenes, column]),
                    ylab = "Gene Sig for sensitive.temp27",
                    main = paste("MM vs. GS\n"),
                    cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = module)
-
+#this is correlation plot ^^^
 #brown module and sensitive.temp27 are highly correlated
 #could create these figures for each of the modules you find interesting that you want to further explore 
 
@@ -327,6 +339,9 @@ verboseScatterplot(abs(geneModuleMembership[moduleGenes, column]),
 vs=t(datExpr0)
 cands=names(datExpr0[moduleColors=="brown"]) 
 
+
+#!!!!!!!!!!!!!!!!!!!!!!!!!!somthing is wrong with c.vsd it should have treatments in it and it doesnt
+#making the figure below look wrong 
 c.vsd=vs[rownames(vs) %in% cands,]
 head(c.vsd)
 nrow(c.vsd) #should correspond to module size,  brown = 14157
@@ -357,43 +372,45 @@ par(mar=c(5, 4.2, 0, 0.7))
 barplot(ME, col=which.module, main="", cex.main=2,
         ylab="eigengene expression",xlab="sample")
 #this is a cool plot where you can see that genes in this module are upregulated in the pH7.5 treatment
+#this is looking at eigengene expression (overall expression of where genes are going) up = upreg, down=downreg
+#~1:18
 
 ##############################heatmap of module expression with bar plot of trait of interest by sample...
 #here we just have binary traits, but if you have a continuous trait this code is cool
-sizeGrWindow(8,7);
-which.module="yellow" #pick module of interest
-which.trait="fvfm" #change trait of interest here
-datTraits=datTraits[order((datTraits$fvfm),decreasing=T),]#change trait of interest here
+#sizeGrWindow(8,7);
+#which.module="yellow" #pick module of interest
+##which.trait="fvfm" #change trait of interest here
+#datTraits=datTraits[order((datTraits$fvfm),decreasing=T),]#change trait of interest here
 
-trait=datTraits[, paste(which.trait)]
-genes=datExpr0[,moduleColors==which.module ] #replace where says subgene below to plot all rather than just subset
-genes=genes[rownames(datTraits),]
+#trait=datTraits[, paste(which.trait)]
+#genes=datExpr0[,moduleColors==which.module ] #replace where says subgene below to plot all rather than just subset
+#genes=genes[rownames(datTraits),]
 
 #quartz()
-par(mfrow=c(2,1), mar=c(0.3, 5.5, 3, 2))
-plotMat(t(scale(genes) ),nrgcols=30,rlabels=F, clabels=rownames(genes), rcols=which.module)
-par(mar=c(5, 4.2, 0, 0.7))
-barplot(trait, col=which.module, main="", cex.main=2,
-        ylab="fvfm",xlab="sample")#change trait of interest here
+#par(mfrow=c(2,1), mar=c(0.3, 5.5, 3, 2))
+#plotMat(t(scale(genes) ),nrgcols=30,rlabels=F, clabels=rownames(genes), rcols=which.module)
+#par(mar=c(5, 4.2, 0, 0.7))
+#barplot(trait, col=which.module, main="", cex.main=2,
+        #ylab="fvfm",xlab="sample")#change trait of interest here
 
+#getting error here !!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-
+#this is KME data
 #Gene relationship to trait and important modules: Gene Significance and Module membership
 allkME =as.data.frame(signedKME(t(dat), MEs))
 head(allkME)
-vsd=read.csv(file="rlog_MMcoral2.csv", row.names=1)
+vsd=read.csv(file="rlog_MMbrown.csv", row.names=1)
 head(vsd)
-gg=read.table("Crep454_iso2gene.tab", sep="\t")
+gg=read.table("Crep454_iso2gene.tab", sep="\t") #assume this would be the transcript2gene.tab file?????????????????
 head(gg)
 library(pheatmap)
 
 ############################################
-whichModule="coral2"
-top=100
+whichModule="brown"
+top=100 #looking at the top 100 genes 
 
 datME=MEs
-vsd <- read.csv("Crep_wgcna_allgenes.csv", row.names=1)
+vsd <- read.csv("Crep_wgcna_allgenes.csv", row.names=1) #this is lcpm.csv for us
 head(vsd)
 datExpr=t(vsd)
 modcol=paste("kME",whichModule,sep="")
@@ -418,15 +435,18 @@ for(i in 1:length(hubs[,1])) {
 } 
 row.names(hubs)=gnames
 length(hubs)
+#labeling row names with gnames from gg
 
 contrasting = colorRampPalette(rev(c("chocolate1","#FEE090","grey10", "cyan3","cyan")))(100)
 #quartz()
 pheatmap(hubs,scale="row",col=contrasting,border_color=NA, main=paste(whichModule,"top",top,"kME",sep=""))
+#makes heatmap with annotations of genes if they have them
+#genes that assign to color module the best are shown here 
 
-###fisher for GO
+###fisher for GO - 1 if in module, 0 if not 
 ##########fisher of module vs whole dataset
 library(WGCNA)
-vsd <- read.csv("Crep_wgcna_allgenes.csv", row.names=1)
+vsd <- read.csv("Crep_wgcna_allgenes.csv", row.names=1) 
 head(vsd)
 options(stringsAsFactors=FALSE)
 data=t(vsd)
@@ -434,15 +454,17 @@ allkME =as.data.frame(signedKME(data, MEs))
 
 whichModule="coral2" # name your color and execute to the end
 
-length(moduleColors)
+length(moduleColors) #
 inModule=data.frame("module"=rep(0,nrow(vsd)))
 row.names(inModule)=row.names(vsd)
 genes=row.names(vsd)[moduleColors == whichModule]
 inModule[genes,1]=1
-sum(inModule[,1])
+sum(inModule[,1]) #should be same number of color module chosen above
 head(inModule)
 write.csv(inModule,file=paste(whichModule,"_fisher.csv",sep=""),quote=F)
+#will be file with samples and column of 0 or 1
 
+#KME way is how good gene fits to module?
 modColName=paste("kME",whichModule,sep="")
 modkME=as.data.frame(allkME[,modColName])
 row.names(modkME)=row.names(allkME)
