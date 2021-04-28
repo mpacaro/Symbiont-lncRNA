@@ -10,14 +10,24 @@ output: html_document
 
 
 
-
-
 ## Version Control
 
 R version 4.0.3 was used for all analyses.
-```{}
 
-```
+Packages:
+tximport package version 1.16.1
+dplyr package version 1.0.1
+ggplot2 package version 3.3.2
+package version
+package version
+package version
+package version
+package version
+package version
+package version
+package version
+package version
+package version
 
 
 

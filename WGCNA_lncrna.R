@@ -304,10 +304,10 @@ length(uniq_mRNA_allmodules)
 
 #Gene relationship to trait and important modules:
 # Define variable weight containing the weight column of datTrait - leave weight as variable, but change names in first 2 commands
-weight = as.data.frame(datTraits$sensitive.temp27); #change Lipidrobust to your trait name
+weight = as.data.frame(datTraits$temp32); #change Lipidrobust to your trait name
 
 #not sure what the trait name should be 
-names(weight) = "sensitive.temp27"
+names(weight) = "temp32"
 # names (colors) of the modules
 modNames = substring(names(MEs), 3)
 geneModuleMembership = as.data.frame(cor(datExpr0, MEs, use = "p"));
@@ -321,7 +321,7 @@ names(GSPvalue) = paste("p.GS.", names(weight), sep="")
 
 #Gene-trait significance correlation plots
 # par(mfrow=c(2,3))
-module = "brown"
+module = "magenta"
 column = match(module, modNames);
 moduleGenes = moduleColors==module;
 sizeGrWindow(7, 7);
@@ -329,17 +329,18 @@ par(mfrow = c(1,1));
 verboseScatterplot(abs(geneModuleMembership[moduleGenes, column]),
                    abs(geneTraitSignificance[moduleGenes, 1]),
                    xlab = paste("ModMem in", module, "module"),
-                   ylab = "Gene Sig for sensitive.temp27",
+                   ylab = "Gene Sig for temp32",
                    main = paste("MM vs. GS\n"),
                    cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = module)
 #this is correlation plot ^^^
 #brown module and sensitive.temp27 are highly correlated
+#brown module and sensitive.temp32 not that correlated
 #could create these figures for each of the modules you find interesting that you want to further explore 
 
 
 #Making VSD files by module for GO plot functions
 vs=t(datExpr0)
-cands=names(datExpr0[moduleColors=="brown"]) 
+cands=names(datExpr0[moduleColors=="magenta"]) 
 
 
 #making the figure below look wrong but i think its just bc we have a lot of samples?
@@ -353,7 +354,7 @@ table(moduleColors)
 #turquoise 
 #14101 
 head(c.vsd)
-write.csv(c.vsd,"rlog_MMbrown.csv",quote=F)
+write.csv(c.vsd,"rlog_MMmagenta.csv",quote=F)
 #this is all of the genes in the brown module it is creating csv with that subset of data
 
 
@@ -361,7 +362,7 @@ write.csv(c.vsd,"rlog_MMbrown.csv",quote=F)
 ##############################heatmap of module expression with bar plot of eigengene, no resorting of samples...
 #names(dis)
 sizeGrWindow(8,7);
-which.module="brown" #pick module of interest
+which.module="magenta" #pick module of interest
 ME=MEs[, paste("ME",which.module, sep="")]
 genes=datExpr0[,moduleColors==which.module ] #replace where says subgene below to plot all rather than just subset
 
@@ -402,14 +403,14 @@ barplot(ME, col=which.module, main="", cex.main=2,
 
 allkME =as.data.frame(signedKME(datExpr0, MEs)) #changed t(dat) to datExpr0 because problems with extra X row 
 head(allkME)
-vsd=read.csv(file="rlog_MMbrown.csv", row.names=1)
+vsd=read.csv(file="rlog_MMmagenta.csv", row.names=1)
 head(vsd)
 gg=read.table("transcript2geneDescription.tab", sep="\t") 
 head(gg)
 library(pheatmap)
 
 ############################################
-whichModule="brown"
+whichModule="magenta"
 top=100 #looking at the top 100 genes 
 
 datME=MEs
@@ -463,7 +464,7 @@ View(data)
 allkME =as.data.frame(signedKME(data, MEs))
 
 
-whichModule="brown" # name your color and execute to the end
+whichModule="magenta" # name your color and execute to the end
 
 #now it is just asking which genes are in the module and going to give a 1 or 0
 length(moduleColors) 
@@ -473,6 +474,7 @@ genes=row.names(vsd)[moduleColors == whichModule]
 inModule[genes,1]=1
 sum(inModule[,1]) #should be same number of color module chosen above, sanity check
 head(inModule)
+View(inModule)
 write.csv(inModule,file=paste(whichModule,"_fisher.csv",sep=""),quote=F) #this will automatically add the color name you are in to csv
 #will be file with samples and column of 0 or 1
 
