@@ -16,7 +16,7 @@
 # First, press command-D on mac or ctrl-shift-H in Rstudio and navigate to the directory containing scripts and input files. Then edit, mark and execute the following bits of code, one after another.
 #setwd("/projectnb/bi594/ganyy825/lncRNA/")
 setwd("/projectnb/bi594/mpacaro/lncRNA/")
-getwd()
+getwd() 
 
 ########################MAGENTA MODULE########################################
 # Edit these to match your data file names: 

@@ -1,42 +1,61 @@
 ---
 title: "An analysis of lncRNA in two different thermally tolerant *Symbiodinium* species"
-author: "Madison Pacaro, Bruce Gan & Alexia Kotorov"
+author: "Madison Pacaro, Yaoyuan Gan & Alexia Kotorov"
 date: "April 29, 2021"
 output: html_document
 ---
 
-## Introduction
+# Introduction
+
+For this assignment, we used data based on ["Sex, Scavengers, and Chaperones: Transcriptome Secrets of Divergent *Symbiodinium* Thermal Tolerances"](https://academic.oup.com/mbe/article/33/9/2201/2579440) by Levin et al. (2020) *Molecular Biology and Evolution*.
+
+Coral bleaching resulting from loss of *Symbiodinium* photosynthesis is a significant problem stemming from rising climate temperatures. *Symbiodinium* and coral maintain a symbiotic relationship, and coral health is dependent on *Symbiodinium* growth. *Symbiodinium* vary in their thermal tolerance and confer this to their hosts, however, the molecular mechanisms are unknown. Levin et al. sought to understand the molecular mechanisms for susceptibility versus acclimation. Previous literature noted that there was often very little transcriptomic response to thermal stress in *Symbiodinium*, so we turned our attention to lncRNA. LncRNA are often involved in stress response and post-translational regulation, which has been the hypothesized molecular mechanism for physiological changes. Taking their data set of the transcriptomic profiles of thermal-sensitive (SM) and thermal-tolerant (MI) *Symbiodinium* species put under thermal stress for 13 days, we used WGCNA & GO enrichment analyses to uncover correlations and better understand the role of lncRNA in coral bleaching. 
+
+![*Symbiodinium* spp.: photo via Wikipedia](Symbiodinium.png)
 
 
-
-
-## Version Control
+# Version Control
 
 R version 4.0.3 was used for all analyses.
 
 Packages:
+
 tximport package version 1.16.1
+
 dplyr package version 1.0.1
+
 ggplot2 package version 3.3.2
+
 limma package version 3.44.3
+
 Glimma package version 1.16.0
+
 edgeR package version 3.30.3
+
 variancePartition package version 1.18.3
+
 BiocParallel package version 1.22.0
+
 stringr package version 1.4.0
+
 RColorBrewer package version 1.1-2
+
 pander package version 0.6.3
+
 gplots package version 3.0.4
+
 WGCNA package version 1.70-3
+
 flashClust package version 1.01-2
+
 go.obo version 1.2
 
 
-## Data Analysis & Methods
+# Data Analysis & Methods
 
-First, we loaded all the required packages for our analyses:
+The first step in our data analysis was to load all the required packages for our analyses:
 
-```{r, warning=FALSE, message=FALSE}
+```{r, eval=FALSE, warning=FALSE, message=FALSE}
 BiocManager::install("") #used to install bioconductor packages 
 library(tximport) 
 library(dplyr)
@@ -54,10 +73,11 @@ library(WGCNA)
 library(flashClust)
 ```
 
+
 # Importing, filtering & normalizing data with EdgeR
 
 To begin data analysis, we first specified our working directory and imported our sample data. We then renamed our sample data columns and created a CSV file for our reformatted sample data.
-```{r}
+```{r eval=FALSE}
 
 set.seed(1)
 setwd("/projectnb/bi594/jfifer/lncrna/") #grabbing data from james' directory
@@ -66,22 +86,19 @@ samples <- read.table("/projectnb/bi594/jfifer/lncrna/samples.txt", header = TRU
 colnames(samples)[1:5] <- c("sample_id","population","time_point","temp","tolerance")  
 # substitute "day -1" with "day 1" in the time_point column
 samples$time_point <- gsub("-1", "1", samples$time_point) 
-View(samples)
 write.csv(samples, "samples.csv")
 ```
 
-
-We then accessesed our salmon output files and read them in as matrices of their abundance, counts and length. We then ran tximport, which goes through each count file for each sample and takes the columns EffectiveLength, TPM, NumReads and puts them each in separate matrices with samples as columns and genes as rows.
-```{r}
+We then accessed our salmon output files and read them in as matrices of their abundance, counts and length. We then ran tximport, which goes through each count file for each sample and takes the columns EffectiveLength, TPM, NumReads and puts them each in separate matrices with samples as columns and genes as rows.
+```{r, eval=FALSE}
 
 # set up the names of the unzipped files so they can be imported/read
 file_names <- paste(samples$sample_id, "_1.transcripts_quant.quant.sf", sep = "")
 txi <- tximport(file_names, type="salmon", txOut=TRUE, countsFromAbundance="lengthScaledTPM") 
-head(txi)
 ```
 
-We then crated a DGEList object from the "counts" matrix called cts and renamed column names using the "sample_id" column in the "samples" file originally imported. cts is the file that is used for the rest of this analysis. 
-```{r}
+We created a DGEList object from the "counts" matrix called cts and renamed column names using the "sample_id" column in the "samples" file originally imported. cts is the file that is used for the rest of this analysis. 
+```{r eval=FALSE}
 cts <- DGEList(txi$counts)
 head(cts)
 colnames(cts) <- samples$sample_id 
@@ -89,7 +106,7 @@ head(cts)
 ```
 
 We then edited the "samples" element in the DGEList-object to count for the different conditions of the experiment.
-```{r}
+```{r, eval=FALSE}
 
 # update "group" column to categorize the samples into the two populations 
 # convert the column into a character type in order to replace it
@@ -111,8 +128,8 @@ c(L, M) # 3.758108 3.837114
 
 ```
 
-We then removed genes from our data set that were lowly expressed. After this, we were left with 32,095 isoforms, which is about 2/3 of the number that we started with.
-```{r}
+Next, we removed genes from our data set that were lowly expressed. After this, we were left with 32,095 isoforms, which is about 2/3 of the number that we started with.
+```{r eval=FALSE}
 
 # 1.4% of genes in the dataset have zero counts across all 48 samples
 table(rowSums(cts$counts==0)==48) 
@@ -124,7 +141,7 @@ dim(cts) # 32095
 ```
 
 We then created density plots of log-CPM vales of each sample for raw pre-filtered and filtered data. From these figures we can see that out of all reads, 0.25 of reads have low counts less than zero. Filtering removed these low counts. 
-```{r}
+```{r eval=FALSE}
 # raw data plot
 lcpm.cutoff <- log2(10/M + 2/L) # log-CPM threshold used in the filtering step (dotted vertical lines in the graphs)
 col <- brewer.pal(12, "Paired")
@@ -149,10 +166,10 @@ for (i in 2:ncol(cts)){
 ```
 
 
-Next, we normalized gene expression distributions by trimmed mean of M-values (TMM) using the calcNormFactors function in edgeR. We created plots before versus after normalization to visualize the changes in data. Normalization is required to ensure that expression distributions of each sample are similar across the experiment. After normalization, we created a CSV file, which is prepped for our WGCNA analysis. 
-#possible figure captions: figures show pre vs post normalization where sample distributions are different before normalization and more similar after. Normalization method is trimmed mean of M-values (TMM). The effect of TMM normalization is mild as the scaling facorts are all close to 1
+![](raw.vs.filt.png)
 
-```{r}
+Next, we normalized gene expression distributions by trimmed mean of M-values (TMM) using the calcNormFactors function in edgeR. We created plots before versus after normalization to visualize the changes in data. Normalization is required to ensure that expression distributions of each sample are similar across the experiment. After normalization, we created a CSV file, which is prepped for our WGCNA analysis. 
+```{r eval=FALSE}
 
 # before normalization  
 boxplot(lcpm, las=2, col=col, main="", cex.axis = 0.8)
@@ -171,10 +188,13 @@ head(lcpm)
 write.csv(lcpm, "lcpm.csv") #using this to bring into WGCNA
 ```
 
+![](beforenorm.png)
+![](afternorm.png)
+
 # WGCNA Analysis 
 
-To begin our WGCNA analysis, we start by bringing in the filtered and normalized dataset from above and reformat and check the data frame. We then create datExpr0, a data frame that is the transpose of our original data frame.
-```{r}
+To begin our WGCNA analysis, we start by bringing in the filtered and normalized data set from above and reformat and check the data frame. We then create datExpr0, a data frame that is the transpose of our original data frame.
+```{r eval=FALSE}
 options(stringsAsFactors=FALSE)
 allowWGCNAThreads()
 
@@ -193,42 +213,513 @@ View(datExpr0)
 ```
 
 We then checked to ensure we did not have outliers contained within our data, which we did not.
-```{r}
+```{r eval=FALSE}
 gsg = goodSamplesGenes(datExpr0, verbose = 3);
 gsg$allOK #if TRUE, no outlier genes
 
 ```
 
+We then specified a new working directory and imported our sample traits CSV displaying samples versus trait conditions in a binary format.
+```{r eval=FALSE}
 
-```{r}
+traitData= read.csv("samples_traits.csv", row.names=1)
+dim(traitData)
+head(traitData)
+names(traitData) 
+```
+
+We then created a data frame to store our trait data, analaogous to our expression data. We then checked to ensure our data sets aligned correctly, which they did.
+```{r eval=FALSE}
+dim(datExpr0)
+rownames(datExpr0)
+rownames(traitData)=rownames(datExpr0)
+traitData$Sample= NULL 
+datTraits=traitData
+
+table(rownames(datTraits)==rownames(datExpr0)) #should return TRUE if data sets align correctly, otherwise names are out of order
+head(datTraits)
+head(datExpr0)
+```
+
+The next step of our analysis was to create an adjacency matrix to visualize network connectivity of our genes. We specified that our data was "signed" to determine direction of gene expression.
+
+We then created sample dendrograms and converted traits to a color representation, with red indicating high values. This dendrogram helps visualize overall similarity of samples and their traits.
+```{r eval=FALSE}
+
+A=adjacency(t(datExpr0),type="signed") #default is unsigned, we are using signed here
+k=as.numeric(apply(A,2,sum))-1
+# standardized connectivity
+Z.k=scale(k)
+thresholdZ.k=-2.5 # often -2.5
+outlierColor=ifelse(Z.k<thresholdZ.k,"red","black")
+sampleTree = flashClust(as.dist(1-A), method = "average")
+# Convert traits to a color representation where red indicates high values
+traitColors=data.frame(numbers2colors(datTraits,signed=FALSE))
+dimnames(traitColors)[[2]]=paste(names(datTraits))
+datColors=data.frame(outlierC=outlierColor,traitColors)
+# Plot the sample dendrogram and the colors underneath.
+plotDendroAndColors(sampleTree,groupLabels=names(datColors), colors=datColors,main="Sample dendrogram and trait heatmap")
+
+```
+
+![](sampledendrotraitheat.png)
+
+We saved all of the above analyses as Rdata.
+```{r eval=FALSE}
+save(datExpr0, datTraits, file="lncRNA_Samples_Traits_ALL.RData")
+
+```
+
+For the next part of our analysis, we imported our Rdata file created above for our network construction and module detection.
+```{r eval=FALSE}
+options(stringsAsFactors = FALSE)
+allowWGCNAThreads() 
+lnames = load(file="lncRNA_Samples_Traits_ALL.RData")
+```
+
+The next step in our WGCNA analysis was to determine our soft-thresholding power. We did this by calling the network topology analysis function and plotted the results. 
+```{r eval=FALSE}
+powers = c(seq(1,14,by=2), seq(15,30, by=0.5)); #may need to adjust these power values to hone in on proper sft value
+sft = pickSoftThreshold(datExpr0, powerVector = powers, networkType="signed", verbose = 2) #want smallest value, closest to 0.9 (but still under)
+sft
+# Plot the results:
+sizeGrWindow(9, 5)
+par(mfrow = c(1,2));
+cex1 = 0.9;
+# Scale-free topology fit index as a function of the soft-thresholding power
+plot(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+     xlab="Soft Threshold (power)",ylab="Scale Free Topology Model Fit,signed R^2",type="n",
+     main = paste("Scale independence"), ylim=c(0,1));
+text(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+     labels=powers,cex=cex1,col="red");
+# this line corresponds to using an R^2 cut-off of h
+abline(h=0.90,col="red") 
+# Mean connectivity as a function of the soft-thresholding power
+plot(sft$fitIndices[,1], sft$fitIndices[,5],
+     xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n",
+     main = paste("Mean connectivity"))
+text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
+
+```
+![](scale.indep.png)
+
+The plots above allowed us to pick our soft threshold, which we picked based on the values that plateau right below the 0.90 R squared threshold line. Our samples did not pass this this threshold, therefore we picked a softpower of 15 based on an examination of where our sample R squared values leveled off (approximately 0.80). We then translated our adjacency matrix into a topological overlap matrix and calculated the corresponding dissimilarity among genes.
+```{r eval=FALSE}
+softPower=15 #smallest value to plateau at ~0.80
+adjacency=adjacency(datExpr0, power=softPower,type="signed") 
+#translate the adjacency into topological overlap matrix and calculate the corresponding dissimilarity:
+TOM= TOMsimilarity(adjacency,TOMType = "signed")
+dissTOM= 1-TOM
+
+```
+
+We then created a gene tree based on these dissimilarities. Each leaf in this plot corresponds to a gene in our data set and branches that group together densely are interconnected and show highly co-expressed genes. Branches that extend far down are genes most closely related and genes at the top are more dissimilar. 
+```{r eval=FALSE}
+geneTree= flashClust(as.dist(dissTOM), method="average")
+sizeGrWindow(10,6)
+plot(geneTree, xlab="", sub="", main= "Gene Clustering on TOM-based dissimilarity", labels= FALSE,hang=0.04)
+```
+
+![](geneclust.tomdiss.png)
+
+We then specified our module size to be 90, which represents the number of genes that will correspond to each module in our downstream analysis. We then are able to see how many genes are each of our 15 modules that we started out with.
+```{r eval=FALSE}
+minModuleSize=90 #we only want large modules
+dynamicMods= cutreeDynamic(dendro= geneTree, distM= dissTOM, deepSplit=2, pamRespectsDendro= FALSE, minClusterSize= minModuleSize)
+table(dynamicMods)
+```
+
+Here we are assigning colors to each of our modules, replacing the numbers assigned above and then plotting our dendrogram colors beneath. 
+```{r eval=FALSE}
+dynamicColors= labels2colors(dynamicMods)
+sizeGrWindow(8,6)
+plotDendroAndColors(geneTree, dynamicColors, "Dynamic Tree Cut", dendroLabels= FALSE, hang=0.03, addGuide= TRUE, guideHang= 0.05, main= "Gene dendrogram and module colors")
+
+```
+
+![](dendrogram.colors.png)
+
+We then merged our modules whose gene expression profiles were very similar. We first caculated module eigengenes, their dissimilarity, and then clustered them. We saved this data before merging as Rdata below. 
+```{r eval=FALSE}
+MEList= moduleEigengenes(datExpr0, colors= dynamicColors,softPower = 15)
+MEs= MEList$eigengenes
+#Calculate dissimilarity of module eigenegenes
+MEDiss= 1-cor(MEs)
+#Cluster module eigengenes
+METree= flashClust(as.dist(MEDiss), method= "average")
+
+save(dynamicMods, MEList, MEs, MEDiss, METree, file= "Network_lncrna_nomerge.RData")
+```
+
+We then imported the Rdata created in the previous step and plotted our results to visualize the clustering of eigengenes. This figure was used to pick a merge threshold of 0.35, which merged all modules that fell below this threshold. We then ordered the colors of our modules and saved our file.
+```{r eval=FALSE}
+lnames = load(file = "Network_lncrna_nomerge.RData")
+#plot
+sizeGrWindow(7,6)
+plot(METree, main= "Clustering of module eigengenes", xlab= "", sub= "") 
+
+MEDissThres= 0.35  
+
+abline(h=MEDissThres, col="red")
+
+merge= mergeCloseModules(datExpr0, dynamicColors, cutHeight= MEDissThres, verbose =3)
+
+mergedColors= merge$colors
+mergedMEs= merge$newMEs
+
+pdf(file="MergeNetwork.pdf", width=20, height=20)
+plotDendroAndColors(geneTree, cbind(dynamicColors, mergedColors), c("Dynamic Tree Cut", "Merged dynamic"), dendroLabels= FALSE, hang=0.03, addGuide= TRUE, guideHang=0.05)
+
+
+#ordering our colors here 
+moduleColors= mergedColors
+colorOrder= c("grey", standardColors(50))
+moduleLabels= match(moduleColors, colorOrder)-1
+MEs=mergedMEs
+
+#save module colors and labels for use in subsequent parts
+save(MEs, moduleLabels, moduleColors, geneTree, file= "Network_signed_0.35.RData")
+```
+
+![](eigengenes.clust.with0.35.png)
+
+
+In this step, we are relating each of our modules to our 11 treatment traits: sensitive/tolerant symbiont populations, treatment day (1, 9 and 13), temperature conditions (27&deg;C and 32&deg;C) and each temperature and population combination (sensitive at 27&deg;C and 32&deg;C; tolerant at 27&deg;C and 32&deg;C).
+
+We loaded in previous files and then determined the number of modules, their corresponding colors and number of genes. We then recalculated our MEs with color labels and then plotted our module trait correlations in a heat map. Based on the heatmap, we decided to explore the magenta module due to its significant correlation with the temperature treatment traits, which could implicate genes related to stress response in our symbiont.
+```{r eval=FALSE}
+options(stringsAsFactors = FALSE);
+# Load the expression and trait data saved in the first part
+lnames = load(file = "lncRNA_Samples_Traits_ALL.RData");
+#The variable lnames contains the names of loaded variables.
+
+lnames
+# Load network data saved in the second part.
+lnames = load(file = "Network_signed_0.35.RData");
+lnames = load(file = "Network_lncrna_nomerge.RData");
+lnames
+
+#WGCNA calling modules
+nGenes = ncol(datExpr0)
+nSamples = nrow(datExpr0)
+table(moduleColors)
+
+#moduleColors for 0.35 threshold
+#brown greenyellow     magenta      salmon   turquoise 
+#14157         891        2441         505       14101 
+
+# Recalculate MEs with color labels
+MEs0 = moduleEigengenes(datExpr0, moduleColors)$eigengenes
+MEs = orderMEs(MEs0)
+moduleTraitCor = cor(MEs, datTraits, use = "p");
+moduleTraitPvalue = corPvalueStudent(moduleTraitCor, nSamples);
+
+#Module trait correlation heat map
+#quartz()
+sizeGrWindow(10,6)
+# Will display correlations and their p-values
+textMatrix = paste(signif(moduleTraitCor, 2), "\n(",
+                   signif(moduleTraitPvalue, 1), ")", sep = "");
+dim(textMatrix) = dim(moduleTraitCor)
+par(mar = c(6, 8.5, 3, 3));
+# Display the correlation values within a heatmap plot
+labeledHeatmap(Matrix = moduleTraitCor,
+               xLabels = names(datTraits),
+               yLabels = names(MEs),
+               ySymbols = names(MEs),
+               colorLabels = FALSE,
+               colors = blueWhiteRed(50),
+               textMatrix = textMatrix,
+               setStdMargins = FALSE,
+               cex.text = 0.5,
+               zlim = c(-1,1),
+               main = paste("Module-trait relationships"))
+
+```
+![](mod.trait.heatmap.png)
+
+Next we were interesting in determining the number of lncRNAs and mRNAs in each of our modules. We did this with the following code and made double checked that the number of lncRNA and mRNA equaled the total number of genes in each corresponding module. 
+```{r eval=FALSE}
+
+# genes found in each module 
+gyell <- names(datExpr0)[moduleColors=="greenyellow"] 
+turq <- names(datExpr0)[moduleColors=="turquoise"] 
+mag <- names(datExpr0)[moduleColors=="magenta"] 
+brwn <- names(datExpr0)[moduleColors=="brown"] 
+salmon <- names(datExpr0)[moduleColors=="salmon"] 
+
+# number of lncRNAs in each module 
+length(grep("^MSTRG", gyell)) #118
+length(grep("^MSTRG", turq)) #2271
+length(grep("^MSTRG", mag)) #300
+length(grep("^MSTRG", brwn)) #5149
+length(grep("^MSTRG", salmon)) #59
+
+#sum(118+2271+300+5149+59), sanity check, this matches the total length of lncRNAs below
+
+## merge the lncRNAs from each module into one big file   
+lncRNA_allmodules <- c(gyell[grep("^MSTRG", gyell)], turq[grep("^MSTRG", turq)], mag[grep("^MSTRG", mag)], brwn[grep("^MSTRG", brwn)], salmon[grep("^MSTRG", salmon)])
+length(lncRNA_allmodules) # 7897
+## remove any repeated genes 
+uniq_lncRNA_allmodules <- unique(lncRNA_allmodules)
+length(uniq_lncRNA_allmodules)
+# 7897 lncRNAs - no overlapping lncRNAs among modules 
+
+# mRNAs
+# number of mRNAs in each module 
+length(grep("^mRNA", gyell)) #773
+length(grep("^mRNA", turq)) #11830
+length(grep("^mRNA", mag)) #2141
+length(grep("^mRNA", brwn)) #9008
+length(grep("^mRNA", salmon)) #446
+
+## merge the mRNAs from each module into one big file   
+mRNA_allmodules <- c(gyell[grep("^mRNA", gyell)], turq[grep("^mRNA", turq)], mag[grep("^mRNA", mag)], brwn[grep("^mRNA", brwn)], salmon[grep("^mRNA", salmon)])
+length(mRNA_allmodules) #24198
+## remove any repeated genes 
+uniq_mRNA_allmodules <- unique(mRNA_allmodules)
+length(uniq_mRNA_allmodules)
+
+```
+
+We then prepared our data for our GO enrichment analysis. We created a VSD file for the magenta module and then made a CSV file with all of the rlog normalized genes within the magenta module.
+```{r eval=FALSE}
+
+#Making VSD files by module for GO plot functions
+vs=t(datExpr0)
+cands=names(datExpr0[moduleColors=="magenta"]) 
+
+c.vsd=vs[rownames(vs) %in% cands,]
+head(c.vsd)
+nrow(c.vsd) #should correspond to module size
+table(moduleColors)
+
+head(c.vsd)
+write.csv(c.vsd,"rlog_MMmagenta.csv",quote=F)
 
 ```
 
 
-```{r}
+Here we are analyzig KME data. We imported our gene to description file and assigned it to the variable gg.
+```{r eval=FALSE}
+allkME =as.data.frame(signedKME(datExpr0, MEs)) #changed t(dat) to datExpr0 because problems with extra X row 
+head(allkME)
+vsd=read.csv(file="rlog_MMmagenta.csv", row.names=1)
+head(vsd)
+gg=read.table("transcript2geneDescription.tab", sep="\t") 
+head(gg)
+library(pheatmap)
+```
+
+We then wanted to visualize the top 100 genes within the magenta module. We imported the files generated above and then labeled row names from gg variable. We can then see we have 48 genes that are differentially expressed and we plotted these genes in a heat map with corresponding gene annotations.
+```{r eval=FALSE}
+whichModule="magenta"
+top=100 #looking at the top 100 genes 
+
+datME=MEs
+vsd <- read.csv("lcpm.csv", row.names=1) 
+head(vsd)
+datExpr=t(vsd)
+modcol=paste("kME",whichModule,sep="")
+head(vsd)
+sorted=vsd[order(allkME[,modcol],decreasing=T),]
+hubs=sorted[1:top,]
+summary(hubs)
+
+#labeling row names with g names from gg
+gnames=c();counts=0
+for(i in 1:length(hubs[,1])) {
+  if (row.names(hubs)[i] %in% gg$V1) { 
+    counts=counts+1
+    gn=gg[gg$V1==row.names(hubs)[i],2]
+    if (gn %in% gnames) {
+      gn=paste(gn,counts,sep=".")
+    }
+    gnames=append(gnames,gn) 
+  } else { 
+    gnames=append(gnames,i)
+  }
+} 
+row.names(hubs)=gnames
+length(hubs)
+#48 that are significantly deferentially expressed
+
+
+contrasting = colorRampPalette(rev(c("chocolate1","#FEE090","grey10", "cyan3","cyan")))(100)
+#quartz()
+sizeGrWindow(12,9)
+pheatmap(hubs,scale="row",col=contrasting,border_color=NA, main=paste(whichModule,"top",top,"kME",sep=""))
 
 ```
 
+![](top100.png)
 
-```{r}
+
+As the last component of our WGCNA analysis, we performed a Fisher test on our entire samples data set and created a binary output file indicating which genes are within the magenta module (1) and which genes are not (0). We are now ready to perform the GO enrichment analysis with this fisher CSV file for the magenta module.
+```{r eval=FALSE}
+
+library(WGCNA)
+vsd <- read.csv("lcpm.csv", row.names=1) 
+head(vsd)
+options(stringsAsFactors=FALSE)
+data=t(vsd)
+View(data)
+allkME =as.data.frame(signedKME(data, MEs))
+
+
+whichModule="magenta" # name your color and execute to the end
+
+#now it is just asking which genes are in the module and going to give a 1 or 0
+length(moduleColors) 
+inModule=data.frame("module"=rep(0,nrow(vsd)))
+row.names(inModule)=row.names(vsd)
+genes=row.names(vsd)[moduleColors == whichModule]
+inModule[genes,1]=1
+sum(inModule[,1]) #should be same number of color module chosen above, sanity check
+head(inModule)
+View(inModule)
+write.csv(inModule,file=paste(whichModule,"_fisher.csv",sep=""),quote=F) 
+```
+
+
+# GO Enrichment Analysis 
+
+For our GO analysis, we started with assigning variables for gomwuStats arguments and inputted the magenta_fisher.csv we generated in the WGCNA analysis above. We also inputted our sample ID to GO file, which was provided to us.
+```{r eval=FALSE}
+input="magenta_fisher.csv" # GO enrichment analysis based on Fisher's exact test, using binary measure (0 or 1, i.e., either significant or not).
+goAnnotations="newid2go" # two-column, tab-delimited, one line per gene, multiple GO terms separated by semicolon. 
+goDatabase="go.obo" # download from http://www.geneontology.org/GO.downloads.ontology.shtml
+source("gomwu.functions.R")
+```
+
+Here we are setting our GO division to fall under the biological processes (BP) category, and repeated this for the molecular functions and cellular components as well. 
+```{r eval=FALSE}
+goDivision.BP="BP" # change and run GO for each major functional group (BP, MF, CC)
+```
+
+Under biological processes, the magenta module has 14 GO terms that pass the 10% FDR.
+```{r eval=FALSE}
+gomwuStats(input, goDatabase, goAnnotations, goDivision.BP,
+           largest=0.1,  # setting maxmium fraction of total genes before GO terms not represented
+           smallest=5,   # setting minimum number of different genes needed under a GO term to be represented
+           clusterCutHeight=0.25, # setting specificity of represented GO terms 
+           Module=TRUE,Alternative="g" # signifying that we are analyzing a signed WGCNA module 
+)
+```
+
+We then plotted these GO terms and interpreted the annotations corresponding with the module. Based on the plot, some of the most significant processes we see are microtubule-based processes, cilium organization and many processes relating to cellular movement. These annotations could be suggesting this module has genes that are involved with cell division or recombination during meiosis. Both of these could be potential mechanisms for symbiont's to respond to heat stress.
+```{r eval=FALSE}
+results=gomwuPlot(input,goAnnotations,goDivision.BP,
+                  absValue=0.001,  # specified absValue=0.001 due to Fisher's exact test for standard GO enrichment or analyzing a WGCNA module (all non-zero genes = "good genes").
+                  #absValue=1,
+                  level1=0.1, # FDR threshold for plotting. Specify level1=1 to plot all GO categories containing genes exceeding the absValue.
+                  level2=0.05, # FDR cutoff to print in regular (not italic) font.
+                  level3=0.01, # FDR cutoff to print in large bold font.
+                  txtsize=1.2,    
+                  treeHeight=0.5, # height of the hierarchical clustering tree
+                  colors=c("dodgerblue2","firebrick1","skyblue2","lightcoral") 
+)
+
+# text representation of results, with actual adjusted p-values
+results
+```
+
+![](magenta.bp.png)
+
+
+Now we are setting our GO division to fall under the molecular functions (MF) category. Under molecular functions, the magenta module has 2 GO terms that pass the 10% FDR.
+```{r eval=FALSE}
+goDivision.MF="MF" # change and run GO for each major functional group (BP, MF, CC)
+gomwuStats(input, goDatabase, goAnnotations, goDivision.MF,
+           largest=0.1,  # setting maxmium fraction of total genes before GO terms not represented
+           smallest=5,   # setting minimum number of different genes needed under a GO term to be represented
+           clusterCutHeight=0.25, # setting specificity of represented GO terms 
+           Module=TRUE,Alternative="g" # signifying that we are analyzing a signed WGCNA module 
+)
+```
+
+Based on the GO plot, we see molecular two molecular functions that are significantly enriched in our module: cytoskeltal protein binding and actin binding, which are realted to the biological processes mentioned above.
+```{r eval=FALSE}
+results=gomwuPlot(input,goAnnotations,goDivision.MF,
+                  absValue=0.001,  # specified absValue=0.001 due to Fisher's exact test for standard GO enrichment or analyzing a WGCNA module (all non-zero genes = "good genes").
+                  #absValue=1,
+                  level1=0.1, # FDR threshold for plotting. Specify level1=1 to plot all GO categories containing genes exceeding the absValue.
+                  level2=0.05, # FDR cutoff to print in regular (not italic) font.
+                  level3=0.01, # FDR cutoff to print in large bold font.
+                  txtsize=1.2,    
+                  treeHeight=0.5, # height of the hierarchical clustering tree
+                  colors=c("dodgerblue2","firebrick1","skyblue2","lightcoral") 
+)
+
+# text representation of results, with actual adjusted p-values
+results
+```
+
+![](magenta.mf.png)
+
+And finally, we set our GO division to fall under the cellular components GO category (CC). The magenta module had 20 GO terms that passed the 10% FDR for CC.
+```{r eval=FALSE}
+goDivision.CC="CC" # change and run GO for each major functional group (BP, MF, CC)
+gomwuStats(input, goDatabase, goAnnotations, goDivision.CC,
+           largest=0.1,  # setting maxmium fraction of total genes before GO terms not represented
+           smallest=5,   # setting minimum number of different genes needed under a GO term to be represented
+           clusterCutHeight=0.25, # setting specificity of represented GO terms 
+           Module=TRUE,Alternative="g" # signifying that we are analyzing a signed WGCNA module 
+)
+```
+
+Our plot here shows significant enrichment for cellular components such as centrioles, cilium and cell projection. Centrioles are made of microtubules, which are mainly involved in the process of cell division and both cilium and cell projection are involved in motion and division. 
+```{r eval=FALSE}
+results=gomwuPlot(input,goAnnotations,goDivision.CC,
+                  absValue=0.001,  # specified absValue=0.001 due to Fisher's exact test for standard GO enrichment or analyzing a WGCNA module (all non-zero genes = "good genes").
+                  #absValue=1,
+                  level1=0.1, # FDR threshold for plotting. Specify level1=1 to plot all GO categories containing genes exceeding the absValue.
+                  level2=0.05, # FDR cutoff to print in regular (not italic) font.
+                  level3=0.01, # FDR cutoff to print in large bold font.
+                  txtsize=1.2,    
+                  treeHeight=0.5, # height of the hierarchical clustering tree
+                  colors=c("dodgerblue2","firebrick1","skyblue2","lightcoral") 
+)
+
+# text representation of results, with actual adjusted p-values
+results
 
 ```
 
-```{r}
+![](magenta.CC.png)
 
-```
+# Final Figures
 
-## Figures 
+![](raw.vs.filt.png)
+
+Figure 1. The density of log-CPM values for raw data (A) versus filtered data (B) for each sample. Dotted lines represented the log-CPM threshold used when filtering. 
+
+![](beforenorm.png)
+![](afternorm.png)
+
+Figure 2. Box plots showing pre and post normalization of sample distributions by trimmed mean of M-values (TMM) versus log-CPM values. 
+
+![](dendrogram.colors.png)
+
+Figure 3. Sample dendrogram showing clustering of genes based on the similarity of their expression. Branches that extend far down are genes most closely related and genes at the top of the plot are more dissimilar. Highly clustered represent co-expressed genes. The colors located beneath the dendrogram represent signify co-expression modules. 
+
+![](mod.trait.heatmap.png)
+
+Figure 4. Correlations between module eigengenes (rows) and sample traits (columns). Values within matrix boxes are Pearson’s correlation coefficients and the corresponding p-values of the correlation test. The scale of correlation is located on the right, with significant positive correlations in red and significant negative correlations in blue.
+
+![](magenta.bp.png)
+
+Figure 5. Gene ontology (GO) enrichment plot of significantly enriched categories for the magenta module by biological processes (BP). Boldness and text size correspond to the significance of each category as determined by Fisher's exact test.
+
+![](magenta.mf.png)
+
+Figure 6. Gene ontology (GO) enrichment plot of significantly enriched categories for the magenta module by molecular functions (MF). Boldness and text size correspond to the significance of each category as determined by Fisher's exact test.
 
 
+![](magenta.CC.png)
 
+Figure 7. Gene ontology (GO) enrichment plot of significantly enriched categories for the magenta module by cellular components (CC). Boldness and text size correspond to the significance of each category as determined by Fisher's exact test.
 
+# Conclusion 
 
-
-## Conclusion 
-
-
-
-
-
-
+The modules that are correlated to how a specific population reacts to heat stress (ex. greenyellow and brown modules) give 0 terms in GO analysis, most likely due to high numbers of lncRNAs in the modules. We therefore only performed GO analysis on the magenta module. This module has some limitations as it is correlated to how the two symbiont populations react to heat stress in general, and it is not specific to either one of them. The GO terms enriched in the magenta module (300 lncRNAs, 2141 mRNAs) are mainly related to cell division, motion and structural functions. Because the magenta module is highly correlated with how the two *Symbiodinium* populations react to heat stress, it suggests that the possible molecular mechanisms of *Symbiodinium* reaction to heat stress is involved in the change in expression of mRNA related to these functions, which is potentially regulated by lncRNA. The structural changes are most likely due to cell division. Hence, cell division may be a mechanism used by *Symbiodinium* under heat stress. It is also mentioned in the paper by Levin et al. that recombination during meiosis may be a mechanism of adaptation in *Symbiodinium*. This is supported by our findings. One possible explanation for the enriched motion terms is that corals expel *Symbiodinium* under heat stress, which may lead to changes in motion-related expression. However, only sensitive populations should be expelled in theory. Due to the limitation of the magenta module, we do not know if this motion term's enrichment is more specific to one of these two populations. Thus, no further conclusion can be made. Further studies on this can be made with larger sample size and a better designed pipeline which enables GO term analysis on modules that are specific to different populations, which will help provide us with more insight into the function of lncRNA in *Symbiodiniaceae*.
