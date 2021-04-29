@@ -13,23 +13,19 @@ save.image(file="lncRNA.RData")
 
 BiocManager::install("") #used to install bioconductor packages 
 library(tximport) 
-help(package="tximport")
 library(dplyr)
-help(package="dplyr")
 library(ggplot2)
-help(package="ggplot2")
 library(limma)
-help(package="limma")
 library(Glimma)
 library(edgeR)
 library(variancePartition) 
 library(BiocParallel)
 library(stringr)
 library(RColorBrewer) 
-library(WGCNA)
 library(pander)
 library(gplots)
-
+library(WGCNA)
+library(flashClust)
 
 
 # More info:

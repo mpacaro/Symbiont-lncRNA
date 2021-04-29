@@ -1,6 +1,6 @@
 ---
-title: "Symbiont lncRNA"
-author: "Madison, Bruce & Alexia"
+title: "An analysis of lncRNA in two different thermally tolerant *Symbiodinium* species"
+author: "Madison Pacaro, Bruce Gan & Alexia Kotorov"
 date: "April 29, 2021"
 output: html_document
 ---
@@ -18,36 +18,205 @@ Packages:
 tximport package version 1.16.1
 dplyr package version 1.0.1
 ggplot2 package version 3.3.2
-package version
-package version
-package version
-package version
-package version
-package version
-package version
-package version
-package version
-package version
-
-
-
+limma package version 3.44.3
+Glimma package version 1.16.0
+edgeR package version 3.30.3
+variancePartition package version 1.18.3
+BiocParallel package version 1.22.0
+stringr package version 1.4.0
+RColorBrewer package version 1.1-2
+pander package version 0.6.3
+gplots package version 3.0.4
+WGCNA package version 1.70-3
+flashClust package version 1.01-2
 go.obo version 1.2
-
-
-
 
 
 ## Data Analysis & Methods
 
 First, we loaded all the required packages for our analyses:
 
-BB000000400662
+```{r, warning=FALSE, message=FALSE}
+BiocManager::install("") #used to install bioconductor packages 
+library(tximport) 
+library(dplyr)
+library(ggplot2)
+library(limma)
+library(Glimma)
+library(edgeR)
+library(variancePartition) 
+library(BiocParallel)
+library(stringr)
+library(RColorBrewer) 
+library(pander)
+library(gplots)
+library(WGCNA)
+library(flashClust)
+```
+
+# Importing, filtering & normalizing data with EdgeR
+
+To begin data analysis, we first specified our working directory and imported our sample data. We then renamed our sample data columns and created a CSV file for our reformatted sample data.
+```{r}
+
+set.seed(1)
+setwd("/projectnb/bi594/jfifer/lncrna/") #grabbing data from james' directory
+samples <- read.table("/projectnb/bi594/jfifer/lncrna/samples.txt", header = TRUE, sep=",", stringsAsFactors = F)
+# rename columns
+colnames(samples)[1:5] <- c("sample_id","population","time_point","temp","tolerance")  
+# substitute "day -1" with "day 1" in the time_point column
+samples$time_point <- gsub("-1", "1", samples$time_point) 
+View(samples)
+write.csv(samples, "samples.csv")
+```
 
 
+We then accessesed our salmon output files and read them in as matrices of their abundance, counts and length. We then ran tximport, which goes through each count file for each sample and takes the columns EffectiveLength, TPM, NumReads and puts them each in separate matrices with samples as columns and genes as rows.
+```{r}
+
+# set up the names of the unzipped files so they can be imported/read
+file_names <- paste(samples$sample_id, "_1.transcripts_quant.quant.sf", sep = "")
+txi <- tximport(file_names, type="salmon", txOut=TRUE, countsFromAbundance="lengthScaledTPM") 
+head(txi)
+```
+
+We then crated a DGEList object from the "counts" matrix called cts and renamed column names using the "sample_id" column in the "samples" file originally imported. cts is the file that is used for the rest of this analysis. 
+```{r}
+cts <- DGEList(txi$counts)
+head(cts)
+colnames(cts) <- samples$sample_id 
+head(cts)
+```
+
+We then edited the "samples" element in the DGEList-object to count for the different conditions of the experiment.
+```{r}
+
+# update "group" column to categorize the samples into the two populations 
+# convert the column into a character type in order to replace it
+cts$samples$group <- as.character(cts$samples$group)  
+# update 
+cts$samples$group[colnames(cts) %in% samples$sample_id] <- str_sub(samples$population, -3, -2) 
+# convert back to a factor
+cts$samples$group <- as.factor(cts$samples$group)  
+# add a column to separate samples into three time points 
+cts$samples$day <- as.factor(str_sub(samples$time_point, -2,-1))
+# add a column to separate samples into two temperatures  
+cts$samples$temp <- as.factor(samples$temp)
+# variables used in step 6 - this line needs to be run prior to filtering the data
+pre_lcpm <- cpm(cts, log=TRUE) 
+# before filtering, the average library size of our dataset was about 3.8 million, so L approximates to 3.76 and the minimum log-CPM value for each sample becomes log2(2/3.76) = -0.91; a count of zero for this data maps to a log-CPM value of -0.91 after adding the prior count or offset
+L <- mean(cts$samples$lib.size) * 1e-6
+M <- median(cts$samples$lib.size) * 1e-6
+c(L, M) # 3.758108 3.837114
+
+```
+
+We then removed genes from our data set that were lowly expressed. After this, we were left with 32,095 isoforms, which is about 2/3 of the number that we started with.
+```{r}
+
+# 1.4% of genes in the dataset have zero counts across all 48 samples
+table(rowSums(cts$counts==0)==48) 
+# filterByExpr (function in the edgeR package) filters out genes while keeping the ones with worthwhile counts
+dim(cts) # 48155 genes 
+keep <- filterByExpr(cts, group=cts$samples$group)
+cts <- cts[keep,, keep.lib.sizes=FALSE]
+dim(cts) # 32095 
+```
+
+We then created density plots of log-CPM vales of each sample for raw pre-filtered and filtered data. From these figures we can see that out of all reads, 0.25 of reads have low counts less than zero. Filtering removed these low counts. 
+```{r}
+# raw data plot
+lcpm.cutoff <- log2(10/M + 2/L) # log-CPM threshold used in the filtering step (dotted vertical lines in the graphs)
+col <- brewer.pal(12, "Paired")
+par(mfrow=c(1,2))
+plot(density(pre_lcpm[,1]), col=col[1], lwd=2, ylim=c(0,0.26), las=2, main="", xlab="")
+title(main="A. Raw data", xlab="Log-cpm")
+abline(v=lcpm.cutoff, lty=3)
+for (i in 2:ncol(cts)){
+  den <- density(pre_lcpm[,i])
+  lines(den$x, den$y, col=col[i], lwd=2)
+}
+# filtered data plot 
+lcpm <- cpm(cts, log=TRUE)
+plot(density(lcpm[,1]), col=col[1], lwd=2, ylim=c(0,0.26), las=2, main="", xlab="")
+title(main="B. Filtered data", xlab="Log-cpm")
+abline(v=lcpm.cutoff, lty=3)
+for (i in 2:ncol(cts)){
+  den <- density(lcpm[,i])
+  lines(den$x, den$y, col=col[i], lwd=2)
+}
+
+```
 
 
+Next, we normalized gene expression distributions by trimmed mean of M-values (TMM) using the calcNormFactors function in edgeR. We created plots before versus after normalization to visualize the changes in data. Normalization is required to ensure that expression distributions of each sample are similar across the experiment. After normalization, we created a CSV file, which is prepped for our WGCNA analysis. 
+#possible figure captions: figures show pre vs post normalization where sample distributions are different before normalization and more similar after. Normalization method is trimmed mean of M-values (TMM). The effect of TMM normalization is mild as the scaling facorts are all close to 1
+
+```{r}
+
+# before normalization  
+boxplot(lcpm, las=2, col=col, main="", cex.axis = 0.8)
+title(main="Before Normalization",ylab="Log-cpm")
+# normalization factors = scaling factors for the library sizes
+# for our dataset, the effect of TMM-normalization is mild - the scaling factors are all relatively close to 1
+cts <- calcNormFactors(cts, method = "TMM")
+cts$samples$norm.factors
+
+# after normalization 
+lcpm <- cpm(cts, log=TRUE) 
+head(lcpm)
+boxplot(lcpm, las=2, col=col, main="", cex.axis = 0.8)
+title(main="After Normalization",ylab="Log-cpm")
+head(lcpm)
+write.csv(lcpm, "lcpm.csv") #using this to bring into WGCNA
+```
+
+# WGCNA Analysis 
+
+To begin our WGCNA analysis, we start by bringing in the filtered and normalized dataset from above and reformat and check the data frame. We then create datExpr0, a data frame that is the transpose of our original data frame.
+```{r}
+options(stringsAsFactors=FALSE)
+allowWGCNAThreads()
+
+dat=read.csv("lcpm.csv") #bringing in filtered and normalized count data from edgeR
+head(dat) 
+rownames(dat)<-dat$X
+head(dat)
+dat$X=NULL
+head(dat)
+names(dat)
+nrow(dat)
+#32095, this is the same as before (32095 transcripts/isoforms - about 2/3 (67%) of the number that we started with)
+datExpr0 = as.data.frame(t(dat))
+View(datExpr0)
+
+```
+
+We then checked to ensure we did not have outliers contained within our data, which we did not.
+```{r}
+gsg = goodSamplesGenes(datExpr0, verbose = 3);
+gsg$allOK #if TRUE, no outlier genes
+
+```
 
 
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+```{r}
+
+```
 
 ## Figures 
 
